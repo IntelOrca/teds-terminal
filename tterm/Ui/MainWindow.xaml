@@ -238,19 +238,21 @@
         </Grid.ColumnDefinitions>
         <local:TabBar x:Name="tabBarLeft" Grid.Row="0" Grid.Column="0" />
         <local:TabBar x:Name="tabBarRight" Grid.Row="0" Grid.Column="1" />
-        <TextBox Grid.Row="1" Grid.ColumnSpan="2"
-                 BorderThickness="0"
-                 Name="txtConsole"
-                 Text="Test&#xA;Test&#xA;和製漢&#xA;🙋"
-                 AcceptsReturn="True"
-                 AcceptsTab="True"
-                 FontFamily="Consolas"
-                 FontSize="20"
-                 Background="#FF1E1E1E"
-                 Foreground="#FFCCCCCC"
-                 PreviewMouseWheel="TextBox_PreviewMouseWheel"
-                 PreviewKeyDown="txtConsole_PreviewKeyDown"
-                 PreviewTextInput="txtConsole_PreviewTextInput"
-                 Margin="0" Style="{DynamicResource TerminalStyle}" />
+        <Grid Grid.Row="1" Grid.ColumnSpan="2">
+            <TextBox BorderThickness="0"
+                     Name="txtConsole"
+                     Text="Test&#xA;Test&#xA;和製漢&#xA;🙋"
+                     AcceptsReturn="True"
+                     AcceptsTab="True"
+                     FontFamily="Consolas"
+                     FontSize="20"
+                     Background="#FF1E1E1E"
+                     Foreground="#FFCCCCCC"
+                     PreviewMouseWheel="TextBox_PreviewMouseWheel"
+                     PreviewKeyDown="txtConsole_PreviewKeyDown"
+                     PreviewTextInput="txtConsole_PreviewTextInput"
+                     Margin="0" Style="{DynamicResource TerminalStyle}" />
+            <local:ResizeHint x:Name="resizeHint" />
+        </Grid>
     </Grid>
 </metro:MetroWindow>

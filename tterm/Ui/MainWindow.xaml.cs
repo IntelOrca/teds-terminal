@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -10,6 +11,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using MahApps.Metro.Controls;
 using MahApps.Metro.IconPacks;
 using tterm.Ansi;
@@ -25,6 +27,9 @@ namespace tterm.Ui
     /// </summary>
     public partial class MainWindow : MetroWindow
     {
+        private const int MinColumns = 52;
+        private const int MinRows = 4;
+
         private WinPty _pty;
         private StreamWriter _ptyWriter;
         private TerminalBuffer _tBuffer = new TerminalBuffer();
@@ -38,6 +43,9 @@ namespace tterm.Ui
         public MainWindow()
         {
             InitializeComponent();
+
+            resizeHint.Visibility = Visibility.Hidden;
+
             txtConsole.Text = "";
             txtConsole.IsReadOnly = true;
             txtConsole.Focus();
@@ -300,6 +308,12 @@ namespace tterm.Ui
         private IntPtr WindowProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             switch (msg) {
+            case WM_ENTERSIZEMOVE:
+                resizeHint.IsShowing = true;
+                break;
+            case WM_EXITSIZEMOVE:
+                resizeHint.IsShowing = false;
+                break;
             case WM_SIZING:
                 var bounds = Marshal.PtrToStructure<RECT>(lParam);
                 bounds = SnapWindowRect(bounds);
@@ -324,15 +338,19 @@ namespace tterm.Ui
         private Size GetWindowSizeSnap(Size size)
         {
             Size charSize = GetBufferCharSize();
-            Size consoleOffset = new Size(Width - txtConsole.ActualWidth,
-                                          Height - txtConsole.ActualHeight);
-            Size newConsoleSize = new Size(size.Width - consoleOffset.Width,
-                                           size.Height - consoleOffset.Height);
+            Size consoleOffset = new Size(Math.Max(Width - txtConsole.ActualWidth, 0),
+                                          Math.Max(Height - txtConsole.ActualHeight, 0));
+            Size newConsoleSize = new Size(Math.Max(size.Width - consoleOffset.Width, 0),
+                                           Math.Max(size.Height - consoleOffset.Height, 0));
 
             int columns = (int)Math.Round(newConsoleSize.Width / charSize.Width);
             int rows = (int)Math.Round(newConsoleSize.Height / charSize.Height);
 
+            columns = Math.Max(columns, MinColumns);
+            rows = Math.Max(rows, MinRows);
+
             _tBuffer.SetSize(rows, columns);
+            resizeHint.Hint = new Size(columns, rows);
 
             return GetWindowSizeForBufferSize(columns, rows);
         }
@@ -371,7 +389,10 @@ namespace tterm.Ui
                 Brushes.Black,
                 Dpi.PixelsPerDip);
 
-            return new Size(formattedText.WidthIncludingTrailingWhitespace, formattedText.Height);
+            var result = new Size(formattedText.WidthIncludingTrailingWhitespace, formattedText.Height);
+            Debug.Assert(result.Width > 0);
+            Debug.Assert(result.Height > 0);
+            return result;
         }
     }
 }
