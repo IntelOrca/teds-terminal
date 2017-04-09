@@ -77,6 +77,18 @@ namespace tterm.Terminal
             }
         }
 
+        internal void Type(string text)
+        {
+            foreach (char c in text)
+            {
+                if (IsInBuffer(CursorX, CursorY))
+                {
+                    _buffer[GetBufferIndex(CursorX, CursorY)] = c;
+                    CursorX++;
+                }
+            }
+        }
+
         public void ShiftUp()
         {
             for (int y = 0; y < Rows - 1; y++)

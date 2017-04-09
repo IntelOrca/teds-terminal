@@ -18,6 +18,7 @@ using tterm.Ansi;
 using tterm.Extensions;
 using tterm.Terminal;
 using tterm.Ui.Models;
+using tterm.Utility;
 using static tterm.Native.Win32;
 
 namespace tterm.Ui
@@ -89,7 +90,7 @@ namespace tterm.Ui
             _ptyWriter.AutoFlush = true;
 
             ConsoleOutputAsync(_pty.StandardOutput);
-            ConsoleOutputAsync(_pty.StandardError);
+            // ConsoleOutputAsync(_pty.StandardError);
         }
 
         private void ConsoleOutputAsync(Stream stream)
@@ -118,35 +119,17 @@ namespace tterm.Ui
             });
         }
 
-        private int ReadDigits(IList<char> buffer, ref int i, ref char c)
-        {
-            string digits = "";
-            while (Char.IsNumber(c = buffer[i]))
-            {
-                digits += c;
-                i++;
-            }
-            int.TryParse(digits, out int value);
-            return value;
-        }
-
         private void ReceiveOutput(ArraySegment<char> buffer)
         {
-            var ansiParser = new ANSICodeParser();
-            for (int i = 0; i < buffer.Count; i++)
+            var ansiParser = new AnsiParser();
+            TerminalCode[] codes = ansiParser.Parse(new ArrayReader<char>(buffer));
+            foreach (var code in codes)
             {
-                char c = buffer.Array[buffer.Offset + i];
-                if (c == ANSICode.ESC)
-                {
-                    ANSICode? code = ansiParser.Parse(buffer.Substring(i), out int codeLength);
-                    if (code.HasValue)
-                    {
-                        i += codeLength - 1;
-                        ProcessAnsiCode(code.Value);
-                    }
-                }
-                else if (c == '\n')
-                {
+                switch (code.Type) {
+                case TerminalCodeType.Text:
+                    _tBuffer.Type(code.Text);
+                    break;
+                case TerminalCodeType.LineFeed:
                     if (_tBuffer.CursorY == _tBuffer.Rows - 1)
                     {
                         _tBuffer.ShiftUp();
@@ -155,14 +138,13 @@ namespace tterm.Ui
                     {
                         _tBuffer.CursorY++;
                     }
-                }
-                else if (c == '\r')
-                {
+                    break;
+                case TerminalCodeType.CarriageReturn:
                     _tBuffer.CursorX = 0;
-                }
-                else
-                {
-                    _tBuffer.Type(c);
+                    break;
+                default:
+                    ProcessSpecialCode(code);
+                    break;
                 }
             }
             RefreshUI();
@@ -190,28 +172,31 @@ namespace tterm.Ui
             return sb.ToString().TrimEnd();
         }
 
-        private void ProcessAnsiCode(ANSICode code)
+        private void ProcessSpecialCode(TerminalCode code)
         {
             switch (code.Type) {
-            case ANSICodeType.SetCursorPosition:
+            case TerminalCodeType.SetCursorPosition:
                 _tBuffer.CursorX = code.Column;
                 _tBuffer.CursorY = code.Line;
                 break;
-            case ANSICodeType.MoveToColumn:
+            case TerminalCodeType.CursorUp:
+                _tBuffer.CursorY -= code.Line;
+                break;
+            case TerminalCodeType.CursorCharAbsolute:
                 _tBuffer.CursorX = code.Column;
                 break;
-            case ANSICodeType.EraseLine:
+            case TerminalCodeType.EraseInLine:
                 if (code.Line == 0)
                 {
                     _tBuffer.ClearBlock(_tBuffer.CursorX, _tBuffer.CursorY, _tBuffer.Columns - 1, _tBuffer.CursorY);
                 }
                 break;
-            case ANSICodeType.EraseDisplay:
+            case TerminalCodeType.EraseDisplay:
                 _tBuffer.Clear();
                 _tBuffer.CursorX = 0;
                 _tBuffer.CursorY = 0;
                 break;
-            case ANSICodeType.Title:
+            case TerminalCodeType.SetTitle:
                 Dispatcher.Invoke(() =>
                 {
                     _leftTabs[0].Title = code.Text;

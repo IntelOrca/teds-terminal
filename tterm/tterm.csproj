@@ -84,9 +84,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Ansi\ANSICode.cs" />
-    <Compile Include="Ansi\ANSICodeParser.cs" />
-    <Compile Include="Ansi\ANSICodeType.cs" />
+    <Compile Include="Ansi\TerminalCode.cs" />
+    <Compile Include="Ansi\AnsiParser.cs" />
+    <Compile Include="Ansi\TerminalCodeType.cs" />
+    <Compile Include="Ansi\C0.cs" />
     <Compile Include="Terminal\TerminalSession.cs" />
     <Compile Include="Ui\Models\TabDataItem.cs" />
     <Compile Include="Ui\ResizeHint.xaml.cs">

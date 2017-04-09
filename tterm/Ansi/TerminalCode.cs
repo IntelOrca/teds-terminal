@@ -6,16 +6,14 @@ using System.Threading.Tasks;
 
 namespace tterm.Ansi
 {
-    internal struct ANSICode
+    internal struct TerminalCode
     {
-        public const char ESC = '\u001B';
-
-        public ANSICodeType Type { get; }
+        public TerminalCodeType Type { get; }
         public int Line { get; }
         public int Column { get; }
         public string Text { get; }
 
-        public ANSICode(ANSICodeType type)
+        public TerminalCode(TerminalCodeType type)
         {
             Type = type;
             Line = 0;
@@ -23,7 +21,7 @@ namespace tterm.Ansi
             Text = null;
         }
 
-        public ANSICode(ANSICodeType type, string text)
+        public TerminalCode(TerminalCodeType type, string text)
         {
             Type = type;
             Line = 0;
@@ -31,12 +29,24 @@ namespace tterm.Ansi
             Text = text;
         }
 
-        public ANSICode(ANSICodeType type, int line, int column)
+        public TerminalCode(TerminalCodeType type, int line, int column)
         {
             Type = type;
             Line = line;
             Column = column;
             Text = null;
+        }
+
+        public override string ToString()
+        {
+            if (Type == TerminalCodeType.Text)
+            {
+                return Text;
+            }
+            else
+            {
+                return Type.ToString();
+            }
         }
     }
 }
