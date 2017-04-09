@@ -11,9 +11,11 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using MahApps.Metro.Controls;
+using MahApps.Metro.IconPacks;
 using tterm.Ansi;
 using tterm.Extensions;
 using tterm.Terminal;
+using tterm.Ui.Models;
 using static tterm.Native.Win32;
 
 namespace tterm.Ui
@@ -27,6 +29,8 @@ namespace tterm.Ui
         private StreamWriter _ptyWriter;
         private TerminalBuffer _tBuffer = new TerminalBuffer();
         private Size? _charBufferSize;
+        private readonly List<TabDataItem> _leftTabs = new List<TabDataItem>();
+        private readonly List<TabDataItem> _rightTabs = new List<TabDataItem>();
 
         private IntPtr Hwnd => new WindowInteropHelper(this).Handle;
         private DpiScale Dpi => VisualTreeHelper.GetDpi(this);
@@ -37,6 +41,27 @@ namespace tterm.Ui
             txtConsole.Text = "";
             txtConsole.IsReadOnly = true;
             txtConsole.Focus();
+
+            tabBarLeft.DataContext = _leftTabs;
+            tabBarRight.DataContext = _rightTabs;
+
+            _leftTabs.Add(new TabDataItem()
+            {
+                IsActive = true,
+                Title = "cmd"
+            });
+            _leftTabs.Add(new TabDataItem()
+            {
+                Title = "powershell"
+            });
+            _leftTabs.Add(new TabDataItem()
+            {
+                Image = PackIconMaterialKind.Plus
+            });
+            _rightTabs.Add(new TabDataItem()
+            {
+                Image = PackIconMaterialKind.Settings
+            });
         }
 
         protected override void OnSourceInitialized(EventArgs e)
@@ -181,7 +206,7 @@ namespace tterm.Ui
             case ANSICodeType.Title:
                 Dispatcher.Invoke(() =>
                 {
-                    tab1.Content = code.Text;
+                    _leftTabs[0].Title = code.Text;
                 });
                 break;
             }

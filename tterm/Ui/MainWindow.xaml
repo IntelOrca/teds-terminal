@@ -4,6 +4,7 @@
                    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                    xmlns:metro="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+                   xmlns:local="clr-namespace:tterm.Ui"
                    xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
                    mc:Ignorable="d"
                    Title="Ted's Terminal"
@@ -224,38 +225,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style x:Key="TabStyle" TargetType="Button">
-            <Setter Property="Foreground" Value="{DynamicResource IdealForegroundColorBrush}" />
-            <Setter Property="Background" Value="{DynamicResource HighlightBrush}" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Width" Value="200" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="Border"
-                            Background="{TemplateBinding Background}"
-                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                            <ContentControl x:Name="PART_ContentPresenter"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"
-                                            Content="{TemplateBinding Content}"
-                                            ContentStringFormat="{TemplateBinding ContentStringFormat}"
-                                            ContentTemplate="{TemplateBinding ContentTemplate}"
-                                            ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
-                                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource HighlightBrush}" />
-                </Trigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource AccentColorBrush2}" />
-                </Trigger>
-            </Style.Triggers>
-        </Style>
     </metro:MetroWindow.Resources>
     <Grid>
         <Grid.RowDefinitions>
@@ -267,18 +236,8 @@
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="auto" />
         </Grid.ColumnDefinitions>
-        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal">
-            <Button x:Name="tab1" Content="cmd" Style="{DynamicResource TabStyle}" Background="{DynamicResource AccentColorBrush}" />
-            <Button Content="cmd" Style="{DynamicResource TabStyle}" />
-            <Button Width="20" Margin="1,1,1,0" FontSize="10" Style="{DynamicResource TabStyle}">
-                <iconPacks:PackIconMaterial Width="10" Kind="Plus" VerticalAlignment="Center" HorizontalAlignment="Center" />
-            </Button>
-        </StackPanel>
-        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
-            <Button Width="20" Margin="1,1,1,0" FontSize="10" Style="{DynamicResource TabStyle}">
-                <iconPacks:PackIconMaterial Width="10" Kind="Settings" VerticalAlignment="Center" HorizontalAlignment="Center" />
-            </Button>
-        </StackPanel>
+        <local:TabBar x:Name="tabBarLeft" Grid.Row="0" Grid.Column="0" />
+        <local:TabBar x:Name="tabBarRight" Grid.Row="0" Grid.Column="1" />
         <TextBox Grid.Row="1" Grid.ColumnSpan="2"
                  BorderThickness="0"
                  Name="txtConsole"
