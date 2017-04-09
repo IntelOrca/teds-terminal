@@ -1,0 +1,2 @@
+# tedterm
+Ted's Terminal
