@@ -175,7 +175,7 @@ namespace tterm.Ui
         private void ProcessSpecialCode(TerminalCode code)
         {
             switch (code.Type) {
-            case TerminalCodeType.SetCursorPosition:
+            case TerminalCodeType.CursorPosition:
                 _tBuffer.CursorX = code.Column;
                 _tBuffer.CursorY = code.Line;
                 break;
@@ -191,7 +191,7 @@ namespace tterm.Ui
                     _tBuffer.ClearBlock(_tBuffer.CursorX, _tBuffer.CursorY, _tBuffer.Columns - 1, _tBuffer.CursorY);
                 }
                 break;
-            case TerminalCodeType.EraseDisplay:
+            case TerminalCodeType.EraseInDisplay:
                 _tBuffer.Clear();
                 _tBuffer.CursorX = 0;
                 _tBuffer.CursorY = 0;

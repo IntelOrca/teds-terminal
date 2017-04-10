@@ -521,8 +521,14 @@ namespace tterm.Ansi
             case 'G':
                 Emit(new TerminalCode(TerminalCodeType.CursorCharAbsolute, 0, (int)_params[0] - 1));
                 return true;
+            case 'H':
+                Emit(new TerminalCode(TerminalCodeType.CursorPosition, (int)_params[1] - 1, (int)_params[0] - 1));
+                return true;
             case 'K':
                 Emit(TerminalCodeType.EraseInLine);
+                return true;
+            case 'J':
+                Emit(TerminalCodeType.EraseInDisplay);
                 return true;
             case 'h':
                 Emit(TerminalCodeType.SetMode);
