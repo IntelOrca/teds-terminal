@@ -45,11 +45,10 @@ namespace tterm.Ui
         {
             InitializeComponent();
 
-            resizeHint.Visibility = Visibility.Hidden;
-
-            txtConsole.Text = "";
-            txtConsole.IsReadOnly = true;
+            txtConsole.Buffer = _tBuffer;
             txtConsole.Focus();
+
+            resizeHint.Visibility = Visibility.Hidden;
 
             tabBarLeft.DataContext = _leftTabs;
             tabBarRight.DataContext = _rightTabs;
@@ -155,9 +154,10 @@ namespace tterm.Ui
             string text = GetBufferAsString();
             Dispatcher.Invoke(() =>
             {
-                txtConsole.Text = text;
-                txtConsole.SelectionStart = text.Length;
-                txtConsole.ScrollToEnd();
+                txtConsole.UpdateContent();
+                // txtConsole.Text = text;
+                // txtConsole.SelectionStart = text.Length;
+                // txtConsole.ScrollToEnd();
             });
         }
 
@@ -175,6 +175,9 @@ namespace tterm.Ui
         private void ProcessSpecialCode(TerminalCode code)
         {
             switch (code.Type) {
+            case TerminalCodeType.CharAttributes:
+                _tBuffer.CurrentCharAttributes = code.CharAttributes;
+                break;
             case TerminalCodeType.CursorPosition:
                 _tBuffer.CursorX = code.Column;
                 _tBuffer.CursorY = code.Line;
@@ -209,22 +212,22 @@ namespace tterm.Ui
         {
             if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
             {
-                var textBox = (sender as TextBox);
+                var terminal = txtConsole;
                 const double FontSizeDelta = 2;
                 if (e.Delta > 0)
                 {
-                    if (textBox.FontSize < 54)
+                    if (terminal.FontSize < 54)
                     {
-                        textBox.FontSize += FontSizeDelta;
+                        terminal.FontSize += FontSizeDelta;
                         _charBufferSize = null;
                         FixWindowSize();
                     }
                 }
                 else
                 {
-                    if (textBox.FontSize > 8)
+                    if (terminal.FontSize > 8)
                     {
-                        textBox.FontSize -= FontSizeDelta;
+                        terminal.FontSize -= FontSizeDelta;
                         _charBufferSize = null;
                         FixWindowSize();
                     }
@@ -343,8 +346,8 @@ namespace tterm.Ui
         private Size GetWindowSizeForBufferSize(int columns, int rows)
         {
             Size charSize = GetBufferCharSize();
-            Size consoleOffset = new Size(Width - txtConsole.ActualWidth,
-                                          Height - txtConsole.ActualHeight);
+            Size consoleOffset = new Size(Math.Max(Width - txtConsole.ActualWidth, 0),
+                                          Math.Max(Height - txtConsole.ActualHeight, 0));
             Size snappedConsoleSize = new Size(columns * charSize.Width,
                                                rows * charSize.Height);
 

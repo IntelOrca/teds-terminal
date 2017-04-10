@@ -537,7 +537,7 @@ namespace tterm.Ansi
                 Emit(TerminalCodeType.ResetMode);
                 return true;
             case 'm':
-                Emit(TerminalCodeType.CharAttributes);
+                Emit(new TerminalCode(TerminalCodeType.CharAttributes, GetCharAttributes()));
                 return true;
             default:
                 return false;
@@ -583,6 +583,46 @@ namespace tterm.Ansi
         {
             _params.Add(_currentParam);
             _currentParam = 0;
+        }
+
+        private CharAttributes GetCharAttributes()
+        {
+            var attributes = new CharAttributes();
+            for (int i = 0; i < _params.Count; i++)
+            {
+                int p = (int)_params[i];
+                if (p >= 30 && p <= 37)
+                {
+                    // fg color 8
+                    attributes.ForegroundColour = p - 30;
+                }
+                else if (p >= 40 && p <= 47)
+                {
+                    // bg color 8
+                    attributes.BackgroundColour = p - 40;
+                }
+                else if (p >= 90 && p <= 97)
+                {
+                    // fg color 16
+                    p += 8;
+                    attributes.ForegroundColour = p - 90;
+                }
+                else if (p == 0)
+                {
+                    attributes.Flags = 0;
+                    attributes.ForegroundColour = 0;
+                    attributes.BackgroundColour = 0;
+                }
+                else if (p == 1)
+                {
+                    attributes.Flags |= 1;
+                }
+                else
+                {
+
+                }
+            }
+            return attributes;
         }
 
         private void Emit(TerminalCodeType type)

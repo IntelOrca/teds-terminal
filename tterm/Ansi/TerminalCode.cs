@@ -12,29 +12,27 @@ namespace tterm.Ansi
         public int Line { get; }
         public int Column { get; }
         public string Text { get; }
+        public CharAttributes CharAttributes { get; }
 
-        public TerminalCode(TerminalCodeType type)
+        public TerminalCode(TerminalCodeType type) : this()
         {
             Type = type;
-            Line = 0;
-            Column = 0;
-            Text = null;
         }
 
-        public TerminalCode(TerminalCodeType type, string text)
+        public TerminalCode(TerminalCodeType type, string text) : this(type)
         {
-            Type = type;
-            Line = 0;
-            Column = 0;
             Text = text;
         }
 
-        public TerminalCode(TerminalCodeType type, int line, int column)
+        public TerminalCode(TerminalCodeType type, int line, int column) : this(type)
         {
-            Type = type;
             Line = line;
             Column = column;
-            Text = null;
+        }
+
+        public TerminalCode(TerminalCodeType type, CharAttributes charAttributes) : this(type)
+        {
+            CharAttributes = charAttributes;
         }
 
         public override string ToString()

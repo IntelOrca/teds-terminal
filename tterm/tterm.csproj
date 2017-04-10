@@ -68,6 +68,9 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.ValueTuple, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.3.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
+    </Reference>
     <Reference Include="System.Windows.Interactivity">
       <HintPath>..\packages\MahApps.Metro.1.4.3\lib\net45\System.Windows.Interactivity.dll</HintPath>
     </Reference>
@@ -84,6 +87,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Ansi\CharAttributes.cs" />
     <Compile Include="Ansi\TerminalCode.cs" />
     <Compile Include="Ansi\AnsiParser.cs" />
     <Compile Include="Ansi\TerminalCodeType.cs" />
@@ -96,6 +100,7 @@
     <Compile Include="Ui\TabBar.xaml.cs">
       <DependentUpon>TabBar.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Ui\TerminalControl.cs" />
     <Compile Include="Utility\ArrayReader.cs" />
     <Compile Include="Extensions\ArraySegmentExtensions.cs" />
     <Compile Include="Native\Win32.cs" />
