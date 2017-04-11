@@ -28,7 +28,7 @@ namespace tterm.Ansi
             }
         }
 
-        public WinPty(TerminalSize size)
+        public WinPty(TerminalSize size, bool separateStdErr = false)
         {
             _size = size;
 
@@ -37,7 +37,12 @@ namespace tterm.Ansi
             IntPtr spawnCfg = IntPtr.Zero;
             try
             {
-                cfg = winpty_config_new(WINPTY_FLAG_CONERR | WINPTY_FLAG_COLOR_ESCAPES, out err);
+                ulong cfgFlags = WINPTY_FLAG_COLOR_ESCAPES;
+                if (separateStdErr)
+                {
+                    cfgFlags |= WINPTY_FLAG_CONERR;
+                }
+                cfg = winpty_config_new(cfgFlags, out err);
                 winpty_config_set_initial_size(cfg, size.Columns, size.Rows);
 
                 _handle = winpty_open(cfg, out err);
@@ -55,7 +60,10 @@ namespace tterm.Ansi
 
                 StandardInput = CreatePipe(winpty_conin_name(_handle), PipeDirection.Out);
                 StandardOutput = CreatePipe(winpty_conout_name(_handle), PipeDirection.In);
-                StandardError = CreatePipe(winpty_conerr_name(_handle), PipeDirection.In);
+                if (separateStdErr)
+                {
+                    StandardError = CreatePipe(winpty_conerr_name(_handle), PipeDirection.In);
+                }
 
                 if (!winpty_spawn(_handle, spawnCfg, out IntPtr process, out IntPtr thread, out int procError, out err))
                 {

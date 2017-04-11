@@ -37,6 +37,7 @@ namespace tterm.Ui
         private Size? _charBufferSize;
         private readonly List<TabDataItem> _leftTabs = new List<TabDataItem>();
         private readonly List<TabDataItem> _rightTabs = new List<TabDataItem>();
+        private object _bufferSync = new object();
 
         private IntPtr Hwnd => new WindowInteropHelper(this).Handle;
         private DpiScale Dpi => VisualTreeHelper.GetDpi(this);
@@ -89,7 +90,6 @@ namespace tterm.Ui
             _ptyWriter.AutoFlush = true;
 
             ConsoleOutputAsync(_pty.StandardOutput);
-            // ConsoleOutputAsync(_pty.StandardError);
         }
 
         private void ConsoleOutputAsync(Stream stream)
@@ -122,28 +122,11 @@ namespace tterm.Ui
         {
             var ansiParser = new AnsiParser();
             TerminalCode[] codes = ansiParser.Parse(new ArrayReader<char>(buffer));
-            foreach (var code in codes)
+            lock (_bufferSync)
             {
-                switch (code.Type) {
-                case TerminalCodeType.Text:
-                    _tBuffer.Type(code.Text);
-                    break;
-                case TerminalCodeType.LineFeed:
-                    if (_tBuffer.CursorY == _tBuffer.Size.Rows - 1)
-                    {
-                        _tBuffer.ShiftUp();
-                    }
-                    else
-                    {
-                        _tBuffer.CursorY++;
-                    }
-                    break;
-                case TerminalCodeType.CarriageReturn:
-                    _tBuffer.CursorX = 0;
-                    break;
-                default:
-                    ProcessSpecialCode(code);
-                    break;
+                foreach (var code in codes)
+                {
+                    ProcessTerminalCode(code);
                 }
             }
             RefreshUI();
@@ -172,9 +155,25 @@ namespace tterm.Ui
             return sb.ToString().TrimEnd();
         }
 
-        private void ProcessSpecialCode(TerminalCode code)
+        private void ProcessTerminalCode(TerminalCode code)
         {
             switch (code.Type) {
+            case TerminalCodeType.Text:
+                _tBuffer.Type(code.Text);
+                break;
+            case TerminalCodeType.LineFeed:
+                if (_tBuffer.CursorY == _tBuffer.Size.Rows - 1)
+                {
+                    _tBuffer.ShiftUp();
+                }
+                else
+                {
+                    _tBuffer.CursorY++;
+                }
+                break;
+            case TerminalCodeType.CarriageReturn:
+                _tBuffer.CursorX = 0;
+                break;
             case TerminalCodeType.CharAttributes:
                 _tBuffer.CurrentCharAttributes = code.CharAttributes;
                 break;
