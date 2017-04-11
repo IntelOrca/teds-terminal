@@ -31,6 +31,7 @@ namespace tterm.Ui
         private const int MinColumns = 52;
         private const int MinRows = 4;
 
+        private ConfigurationService _configService = new ConfigurationService();
         private WinPty _pty;
         private StreamWriter _ptyWriter;
         private TerminalBuffer _tBuffer = new TerminalBuffer();
@@ -83,6 +84,12 @@ namespace tterm.Ui
 
         private void StartConsole()
         {
+            var config = _configService.Load();
+            var tsize = new TerminalSize(config.Columns, config.Rows);
+            var windowSize = GetWindowSizeForBufferSize(tsize);
+            Width = windowSize.Width;
+            Height = windowSize.Height;
+
             GetWindowSizeSnap(new Size(Width, Height));
 
             _pty = new WinPty(_tBuffer.Size);
@@ -392,6 +399,10 @@ namespace tterm.Ui
             }
             _tBuffer.Size = tsize;
             resizeHint.Hint = tsize;
+
+            _configService.Config.Columns = tsize.Columns;
+            _configService.Config.Rows = tsize.Rows;
+            _configService.Save();
 
             return GetWindowSizeForBufferSize(tsize);
         }

@@ -62,6 +62,9 @@
     <Reference Include="MahApps.Metro.IconPacks.Material">
       <HintPath>..\packages\MahApps.Metro.IconPacks.Material.1.8.0\lib\net46\MahApps.Metro.IconPacks.Material.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="PropertyChanged">
       <HintPath>..\packages\PropertyChanged.Fody.1.52.1\lib\netstandard10\PropertyChanged.dll</HintPath>
       <Private>False</Private>
@@ -92,6 +95,8 @@
     <Compile Include="Ansi\AnsiParser.cs" />
     <Compile Include="Ansi\TerminalCodeType.cs" />
     <Compile Include="Ansi\C0.cs" />
+    <Compile Include="Config.cs" />
+    <Compile Include="ConfigurationService.cs" />
     <Compile Include="Native\WinPty.cs" />
     <Compile Include="Terminal\TerminalSession.cs" />
     <Compile Include="Terminal\TerminalSize.cs" />
