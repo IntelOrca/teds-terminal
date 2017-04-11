@@ -295,30 +295,79 @@ namespace tterm.Ui
         private IntPtr WindowProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             switch (msg) {
-            case WM_ENTERSIZEMOVE:
+            case WM_SIZE:
+            {
+                uint widthHeight = (uint)lParam.ToInt32();
+                var bounds = new RECT()
+                {
+                    right = (int)(widthHeight & 0xFFFF),
+                    bottom = (int)(widthHeight >> 16),
+                };
+
+                ForceWindowRect(bounds);
+
                 resizeHint.IsShowing = true;
+                resizeHint.IsShowing = false;
                 break;
+            }
             case WM_EXITSIZEMOVE:
                 resizeHint.IsShowing = false;
                 break;
             case WM_SIZING:
+            {
+                resizeHint.IsShowing = true;
+
                 var bounds = Marshal.PtrToStructure<RECT>(lParam);
-                bounds = SnapWindowRect(bounds);
+                bounds = SnapWindowRect(bounds, wParam.ToInt32());
                 Marshal.StructureToPtr(bounds, lParam, fDeleteOld: false);
                 break;
+            }
             }
             return IntPtr.Zero;
         }
 
-        private RECT SnapWindowRect(RECT bounds)
+        private void ForceWindowRect(RECT bounds)
+        {
+            var dpi = Dpi;
+            var absoluteSize = new Size(bounds.right - bounds.left, bounds.bottom - bounds.top);
+            var scaledSize = new Size(absoluteSize.Width / dpi.DpiScaleX, absoluteSize.Height / dpi.DpiScaleY);
+            GetWindowSizeSnap(scaledSize);
+        }
+
+        private RECT SnapWindowRect(RECT bounds, int grabDirection)
         {
             var dpi = Dpi;
             var absoluteSize = new Size(bounds.right - bounds.left, bounds.bottom - bounds.top);
             var scaledSize = new Size(absoluteSize.Width / dpi.DpiScaleX, absoluteSize.Height / dpi.DpiScaleY);
             scaledSize = GetWindowSizeSnap(scaledSize);
             absoluteSize = new Size(scaledSize.Width * dpi.DpiScaleX, scaledSize.Height * dpi.DpiScaleY);
-            bounds.right = bounds.left + (int)absoluteSize.Width;
-            bounds.bottom = bounds.top + (int)absoluteSize.Height;
+
+            switch (grabDirection) {
+            case WMSZ_LEFT:
+            case WMSZ_TOPLEFT:
+            case WMSZ_BOTTOMLEFT:
+                bounds.left = bounds.right - (int)absoluteSize.Width;
+                break;
+            case WMSZ_RIGHT:
+            case WMSZ_TOPRIGHT:
+            case WMSZ_BOTTOMRIGHT:
+                bounds.right = bounds.left + (int)absoluteSize.Width;
+                break;
+            }
+
+            switch (grabDirection) {
+            case WMSZ_TOP:
+            case WMSZ_TOPLEFT:
+            case WMSZ_TOPRIGHT:
+                bounds.top = bounds.bottom - (int)absoluteSize.Height;
+                break;
+            case WMSZ_BOTTOM:
+            case WMSZ_BOTTOMLEFT:
+            case WMSZ_BOTTOMRIGHT:
+                bounds.bottom = bounds.top + (int)absoluteSize.Height;
+                break;
+            }
+
             return bounds;
         }
 
@@ -336,7 +385,7 @@ namespace tterm.Ui
             columns = Math.Max(columns, MinColumns);
             rows = Math.Max(rows, MinRows);
 
-            TerminalSize tsize = new TerminalSize(columns, rows);
+            var tsize = new TerminalSize(columns, rows);
             if (_pty != null)
             {
                 _pty.Size = tsize;
