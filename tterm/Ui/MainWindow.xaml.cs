@@ -84,7 +84,7 @@ namespace tterm.Ui
         {
             GetWindowSizeSnap(new Size(Width, Height));
 
-            _pty = new WinPty();
+            _pty = new WinPty(new TerminalSize(_tBuffer.Columns, _tBuffer.Rows));
             _ptyWriter = new StreamWriter(_pty.StandardInput);
             _ptyWriter.AutoFlush = true;
 
@@ -337,6 +337,10 @@ namespace tterm.Ui
             columns = Math.Max(columns, MinColumns);
             rows = Math.Max(rows, MinRows);
 
+            if (_pty != null)
+            {
+                _pty.Size = new TerminalSize(columns, rows);
+            }
             _tBuffer.SetSize(rows, columns);
             resizeHint.Hint = new Size(columns, rows);
 

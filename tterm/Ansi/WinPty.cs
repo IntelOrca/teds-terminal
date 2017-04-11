@@ -1,72 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+using tterm.Terminal;
+using static tterm.Native.Win32;
+using static tterm.Native.WinPty;
 
 namespace tterm.Ansi
 {
     internal class WinPty : IDisposable
     {
-        #region Native API
-#pragma warning disable IDE1006 // Naming Styles
-        [DllImport("kernel32.dll")]
-        private static extern IntPtr LoadLibrary(string path);
-
-        [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int winpty_error_code(IntPtr err);
-
-        [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-        private static extern string winpty_error_msg(IntPtr err);
-
-        [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern void winpty_error_free(IntPtr err);
-
-        [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr winpty_config_new(ulong agentFlags, out IntPtr err);
-
-        [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr winpty_open(IntPtr cfg, out IntPtr err);
-
-        [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern void winpty_free(IntPtr wp);
-
-        [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-        private static extern IntPtr winpty_spawn_config_new(ulong spawnFlags,
-                                                             string appname,
-                                                             string cmdline,
-                                                             string cwd,
-                                                             string env,
-                                                             out IntPtr err);
-
-        [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern void winpty_spawn_config_free(IntPtr cfg);
-
-        [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern bool winpty_spawn(IntPtr wp,
-                                                IntPtr cfg,
-                                                out IntPtr process_handle,
-                                                out IntPtr thread_handle,
-                                                out int create_process_error,
-                                                out IntPtr err);
-
-        [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-        private static extern string winpty_conin_name(IntPtr wp);
-
-        [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-        private static extern string winpty_conout_name(IntPtr wp);
-
-        [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-        private static extern string winpty_conerr_name(IntPtr wp);
-
-#pragma warning restore IDE1006 // Naming Styles
-        #endregion
-
         private bool _disposed;
         private IntPtr _handle;
+        private TerminalSize _size;
 
         public Stream StandardInput { get; private set; }
         public Stream StandardOutput { get; private set; }
@@ -83,13 +28,18 @@ namespace tterm.Ansi
             }
         }
 
-        public WinPty()
+        public WinPty(TerminalSize size)
         {
+            _size = size;
+
             IntPtr err = IntPtr.Zero;
+            IntPtr cfg = IntPtr.Zero;
             IntPtr spawnCfg = IntPtr.Zero;
             try
             {
-                IntPtr cfg = winpty_config_new(1 | 4, out err);
+                cfg = winpty_config_new(WINPTY_FLAG_CONERR | WINPTY_FLAG_COLOR_ESCAPES, out err);
+                winpty_config_set_initial_size(cfg, size.Columns, size.Rows);
+
                 _handle = winpty_open(cfg, out err);
                 if (err != IntPtr.Zero)
                 {
@@ -97,7 +47,7 @@ namespace tterm.Ansi
                 }
 
                 string homePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                spawnCfg = winpty_spawn_config_new(1, @"C:\Windows\System32\cmd.exe", null, homePath, null, out err);
+                spawnCfg = winpty_spawn_config_new(WINPTY_SPAWN_FLAG_AUTO_SHUTDOWN, @"C:\Windows\System32\cmd.exe", null, homePath, null, out err);
                 if (err != IntPtr.Zero)
                 {
                     throw new WinPtrException(err);
@@ -114,6 +64,7 @@ namespace tterm.Ansi
             }
             finally
             {
+                winpty_config_free(cfg);
                 winpty_spawn_config_free(spawnCfg);
                 winpty_error_free(err);
             }
@@ -165,6 +116,28 @@ namespace tterm.Ansi
             var pipe = new NamedPipeClientStream(serverName, pipeName, direction);
             pipe.Connect();
             return pipe;
+        }
+
+        public TerminalSize Size
+        {
+            get => _size;
+            set
+            {
+                IntPtr err = IntPtr.Zero;
+                try
+                {
+                    winpty_set_size(_handle, value.Columns, value.Rows, out err);
+                    if (err != IntPtr.Zero)
+                    {
+                        throw new WinPtrException(err);
+                    }
+                    _size = value;
+                }
+                finally
+                {
+                    winpty_error_free(err);
+                }
+            }
         }
 
         private class WinPtrException : Exception

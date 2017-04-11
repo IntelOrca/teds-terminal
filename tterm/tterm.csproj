@@ -92,7 +92,9 @@
     <Compile Include="Ansi\AnsiParser.cs" />
     <Compile Include="Ansi\TerminalCodeType.cs" />
     <Compile Include="Ansi\C0.cs" />
+    <Compile Include="Native\WinPty.cs" />
     <Compile Include="Terminal\TerminalSession.cs" />
+    <Compile Include="Terminal\TerminalSize.cs" />
     <Compile Include="Ui\Models\TabDataItem.cs" />
     <Compile Include="Ui\ResizeHint.xaml.cs">
       <DependentUpon>ResizeHint.xaml</DependentUpon>

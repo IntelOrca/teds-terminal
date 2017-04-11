@@ -1,8 +1,12 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace tterm.Native
 {
-    internal class Win32
+    /// <summary>
+    /// Native API wrapper for Win32.
+    /// </summary>
+    internal static class Win32
     {
         public const int WM_SIZING = 0x0214;
         public const int WM_ENTERSIZEMOVE = 0x0231;
@@ -16,5 +20,8 @@ namespace tterm.Native
             public int right;
             public int bottom;
         }
+
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr LoadLibrary(string path);
     }
 }
