@@ -84,7 +84,7 @@ namespace tterm.Ui
         {
             GetWindowSizeSnap(new Size(Width, Height));
 
-            _pty = new WinPty(new TerminalSize(_tBuffer.Columns, _tBuffer.Rows));
+            _pty = new WinPty(_tBuffer.Size);
             _ptyWriter = new StreamWriter(_pty.StandardInput);
             _ptyWriter.AutoFlush = true;
 
@@ -129,7 +129,7 @@ namespace tterm.Ui
                     _tBuffer.Type(code.Text);
                     break;
                 case TerminalCodeType.LineFeed:
-                    if (_tBuffer.CursorY == _tBuffer.Rows - 1)
+                    if (_tBuffer.CursorY == _tBuffer.Size.Rows - 1)
                     {
                         _tBuffer.ShiftUp();
                     }
@@ -164,7 +164,7 @@ namespace tterm.Ui
         private string GetBufferAsString()
         {
             var sb = new StringBuilder(capacity: 128);
-            for (int y = 0; y < _tBuffer.Rows; y++)
+            for (int y = 0; y < _tBuffer.Size.Rows; y++)
             {
                 string line = _tBuffer.GetLine(y);
                 sb.AppendLine(line);
@@ -191,7 +191,7 @@ namespace tterm.Ui
             case TerminalCodeType.EraseInLine:
                 if (code.Line == 0)
                 {
-                    _tBuffer.ClearBlock(_tBuffer.CursorX, _tBuffer.CursorY, _tBuffer.Columns - 1, _tBuffer.CursorY);
+                    _tBuffer.ClearBlock(_tBuffer.CursorX, _tBuffer.CursorY, _tBuffer.Size.Columns - 1, _tBuffer.CursorY);
                 }
                 break;
             case TerminalCodeType.EraseInDisplay:
@@ -288,7 +288,7 @@ namespace tterm.Ui
 
         private void FixWindowSize()
         {
-            Size fixedSize = GetWindowSizeForBufferSize(_tBuffer.Columns, _tBuffer.Rows);
+            Size fixedSize = GetWindowSizeForBufferSize(_tBuffer.Size);
             Width = fixedSize.Width;
             Height = fixedSize.Height;
         }
@@ -337,23 +337,24 @@ namespace tterm.Ui
             columns = Math.Max(columns, MinColumns);
             rows = Math.Max(rows, MinRows);
 
+            TerminalSize tsize = new TerminalSize(columns, rows);
             if (_pty != null)
             {
-                _pty.Size = new TerminalSize(columns, rows);
+                _pty.Size = tsize;
             }
-            _tBuffer.SetSize(rows, columns);
-            resizeHint.Hint = new Size(columns, rows);
+            _tBuffer.Size = tsize;
+            resizeHint.Hint = tsize;
 
-            return GetWindowSizeForBufferSize(columns, rows);
+            return GetWindowSizeForBufferSize(tsize);
         }
 
-        private Size GetWindowSizeForBufferSize(int columns, int rows)
+        private Size GetWindowSizeForBufferSize(TerminalSize size)
         {
             Size charSize = GetBufferCharSize();
             Size consoleOffset = new Size(Math.Max(Width - txtConsole.ActualWidth, 0),
                                           Math.Max(Height - txtConsole.ActualHeight, 0));
-            Size snappedConsoleSize = new Size(columns * charSize.Width,
-                                               rows * charSize.Height);
+            Size snappedConsoleSize = new Size(size.Columns * charSize.Width,
+                                               size.Rows * charSize.Height);
 
             Size result = new Size(Math.Ceiling(snappedConsoleSize.Width + consoleOffset.Width) + 2,
                                    Math.Ceiling(snappedConsoleSize.Height + consoleOffset.Height));

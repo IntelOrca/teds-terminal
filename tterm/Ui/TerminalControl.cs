@@ -39,7 +39,7 @@ namespace tterm.Ui
         {
             var inlines = new List<Inline>();
             var buffer = Buffer;
-            for (int y = 0; y < buffer.Rows; y++)
+            for (int y = 0; y < buffer.Size.Rows; y++)
             {
                 var lineTags = buffer.GetFormattedLine(y);
                 foreach (var tag in lineTags)

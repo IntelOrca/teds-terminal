@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Animation;
+using tterm.Terminal;
 
 namespace tterm.Ui
 {
@@ -13,14 +14,14 @@ namespace tterm.Ui
         private const double HideDelayTime = 1.0;
         private const double FadeTime = 0.5;
 
-        private Size _size;
+        private TerminalSize _size;
 
         public ResizeHint()
         {
             InitializeComponent();
         }
 
-        public Size Hint
+        public TerminalSize Hint
         {
             get => _size;
             set
@@ -28,7 +29,7 @@ namespace tterm.Ui
                 if (value != _size)
                 {
                     _size = value;
-                    resizeHintText.Text = string.Format("{0} x {1}", (int)_size.Width, (int)_size.Height);
+                    resizeHintText.Text = string.Format("{0} x {1}", _size.Columns, _size.Rows);
                 }
             }
         }
