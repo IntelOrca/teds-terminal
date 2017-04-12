@@ -209,7 +209,7 @@ namespace tterm.Ansi
                         case 2:
                             if (_params.Count >= 1 && _params[1] != null)
                             {
-                                Emit(TerminalCodeType.SetTitle);
+                                Emit(new TerminalCode(TerminalCodeType.SetTitle, (string)_params[1]));
                             }
                             break;
                         case 3:
