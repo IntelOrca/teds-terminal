@@ -109,11 +109,17 @@ namespace tterm.Ui
                     int readChars;
                     do
                     {
+                        int offset = 0;
                         var buffer = new char[1024];
-                        readChars = await sr.ReadAsync(buffer, 0, buffer.Length);
+                        readChars = await sr.ReadAsync(buffer, offset, buffer.Length - offset);
                         if (readChars > 0)
                         {
-                            ReceiveOutput(new ArraySegment<char>(buffer, 0, readChars));
+                            var segment = new ArraySegment<char>(buffer, 0, readChars);
+                            var reader = new ArrayReader<char>(segment);
+                            ReceiveOutput(reader);
+
+                            Array.Copy(buffer, reader.Offset, buffer, 0, reader.RemainingLength);
+                            offset = reader.RemainingLength;
                         }
                     }
                     while (readChars != 0);
@@ -125,10 +131,10 @@ namespace tterm.Ui
             });
         }
 
-        private void ReceiveOutput(ArraySegment<char> buffer)
+        private void ReceiveOutput(ArrayReader<char> reader)
         {
             var ansiParser = new AnsiParser();
-            TerminalCode[] codes = ansiParser.Parse(new ArrayReader<char>(buffer));
+            TerminalCode[] codes = ansiParser.Parse(reader);
             lock (_bufferSync)
             {
                 foreach (var code in codes)
@@ -145,9 +151,6 @@ namespace tterm.Ui
             Dispatcher.Invoke(() =>
             {
                 txtConsole.UpdateContent();
-                // txtConsole.Text = text;
-                // txtConsole.SelectionStart = text.Length;
-                // txtConsole.ScrollToEnd();
             });
         }
 
@@ -277,8 +280,6 @@ namespace tterm.Ui
             }
             if (text != string.Empty)
             {
-                // txtConsole.Text += text;
-                // txtConsole.SelectionStart = txtConsole.Text.Length;
                 _ptyWriter.Write(text);
                 e.Handled = true;
             }
@@ -286,9 +287,13 @@ namespace tterm.Ui
 
         private void txtConsole_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
-            // txtConsole.Text += e.Text;
-            // txtConsole.SelectionStart = txtConsole.Text.Length;
-            _ptyWriter.Write(e.Text);
+            string text = e.Text;
+            if (string.IsNullOrEmpty(text))
+            {
+                text = e.ControlText;
+            }
+
+            _ptyWriter.Write(text);
             e.Handled = true;
         }
 

@@ -410,6 +410,7 @@ namespace tterm.Ansi
                     break;
                 }
             }
+            FinialiseEmit();
             return _terminalCodes.ToArray();
         }
 
