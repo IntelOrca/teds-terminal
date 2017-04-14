@@ -275,50 +275,70 @@ namespace tterm.Ui
 
         protected override void OnPreviewKeyDown(KeyEventArgs e)
         {
+            ModifierKeys modifiers = e.KeyboardDevice.Modifiers;
+            int modCode = 0;
+            if (modifiers.HasFlag(ModifierKeys.Shift)) modCode |= 1;
+            if (modifiers.HasFlag(ModifierKeys.Alt)) modCode |= 2;
+            if (modifiers.HasFlag(ModifierKeys.Control)) modCode |= 4;
+            if (modifiers.HasFlag(ModifierKeys.Windows)) modCode |= 8;
+
             string text = string.Empty;
             switch (e.Key)
             {
                 case Key.Escape:
-                    text = "\u001B\u001B\u001B";
+                    text = $"{C0.ESC}{C0.ESC}{C0.ESC}";
                     break;
                 case Key.Back:
-                    text = C0.BS.ToString();
+                    text = modifiers.HasFlag(ModifierKeys.Shift) ?
+                        C0.BS.ToString() :
+                        C0.DEL.ToString();
                     break;
                 case Key.Delete:
-                    text = C0.ESC + "[3~";
+                    text = (modCode == 0) ?
+                        $"{C0.ESC}[3~" :
+                        $"{C0.ESC}[3;{modCode + 1}~";
+                    break;
+                case Key.Tab:
+                    text = modifiers.HasFlag(ModifierKeys.Shift) ?
+                        $"{C0.ESC}[Z" :
+                        C0.HT.ToString();
                     break;
                 case Key.Up:
-                    text = C0.ESC + "[A";
+                    text = Construct(1, 'A');
                     break;
                 case Key.Down:
-                    text = C0.ESC + "[B";
+                    text = Construct(1, 'B');
                     break;
                 case Key.Right:
-                    text = C0.ESC + "[C";
+                    text = Construct(1, 'C');
                     break;
                 case Key.Left:
-                    text = C0.ESC + "[D";
+                    text = Construct(1, 'D');
                     break;
                 case Key.Home:
-                    text = C0.ESC + "[H";
+                    text = Construct(1, 'H');
                     break;
                 case Key.End:
-                    text = C0.ESC + "[F";
+                    text = Construct(1, 'F');
                     break;
                 case Key.Return:
-                    text = "\r";
+                    text = C0.CR.ToString();
                     break;
                 case Key.Space:
                     text = " ";
-                    break;
-                case Key.Tab:
-                    text = "\t";
                     break;
             }
             if (text != string.Empty)
             {
                 _session.Write(text);
                 e.Handled = true;
+            }
+
+            string Construct(int a, char c)
+            {
+                return (modCode == 0) ?
+                    $"{C0.ESC}O{c}" :
+                    $"{C0.ESC}[{a};{modCode + 1}{c}";
             }
         }
 
