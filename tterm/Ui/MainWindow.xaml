@@ -8,10 +8,10 @@
                    xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
                    mc:Ignorable="d"
                    Title="Ted's Terminal"
-                   TitleCharacterCasing="Normal"
                    Width="800"
                    Height="350"
                    ResizeMode="CanResizeWithGrip"
+                   TitleCharacterCasing="Normal"
                    WindowTransitionsEnabled="False">
     <Grid>
         <Grid.RowDefinitions>

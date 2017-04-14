@@ -48,6 +48,12 @@ namespace tterm.Ui
         {
             InitializeComponent();
 
+            var config = _configService.Load();
+            if (config.AllowTransparancy)
+            {
+                AllowsTransparency = true;
+            }
+
             txtConsole.Buffer = _tBuffer;
             txtConsole.Focus();
 
@@ -85,7 +91,7 @@ namespace tterm.Ui
 
         private void StartConsole()
         {
-            var config = _configService.Load();
+            var config = _configService.Config;
             var tsize = new TerminalSize(config.Columns, config.Rows);
             var windowSize = GetWindowSizeForBufferSize(tsize);
             Width = windowSize.Width;
@@ -262,27 +268,47 @@ namespace tterm.Ui
         {
             if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
             {
-                var terminal = txtConsole;
-                const double FontSizeDelta = 2;
-                if (e.Delta > 0)
+                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
                 {
-                    if (terminal.FontSize < 54)
+                    if (AllowsTransparency)
                     {
-                        terminal.FontSize += FontSizeDelta;
-                        _charBufferSize = null;
-                        FixWindowSize();
+                        var terminal = txtConsole;
+                        const double OpacityDelta = 1 / 32.0;
+                        if (e.Delta > 0)
+                        {
+                            Opacity = Math.Min(Opacity + OpacityDelta, 1);
+                        }
+                        else
+                        {
+                            Opacity = Math.Max(Opacity - OpacityDelta, 0.25);
+                        }
+                        e.Handled = true;
                     }
                 }
                 else
                 {
-                    if (terminal.FontSize > 8)
+                    var terminal = txtConsole;
+                    const double FontSizeDelta = 2;
+                    if (e.Delta > 0)
                     {
-                        terminal.FontSize -= FontSizeDelta;
-                        _charBufferSize = null;
-                        FixWindowSize();
+                        if (terminal.FontSize < 54)
+                        {
+                            terminal.FontSize += FontSizeDelta;
+                            _charBufferSize = null;
+                            FixWindowSize();
+                        }
                     }
+                    else
+                    {
+                        if (terminal.FontSize > 8)
+                        {
+                            terminal.FontSize -= FontSizeDelta;
+                            _charBufferSize = null;
+                            FixWindowSize();
+                        }
+                    }
+                    e.Handled = true;
                 }
-                e.Handled = true;
             }
         }
 
