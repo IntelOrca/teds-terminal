@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
 using tterm.Ansi;
 
 namespace tterm.Terminal
@@ -112,14 +112,14 @@ namespace tterm.Terminal
             return line;
         }
 
-        public IList<TerminalTag> GetFormattedLine(int y)
+        public TerminalTagArray GetFormattedLine(int y)
         {
             var buffer = _buffer;
             var bufferAttributes = _bufferAttributes;
             int startIndex = GetBufferIndex(0, y);
             int endIndex = startIndex + _size.Columns;
 
-            var tags = new List<TerminalTag>();
+            var tags = ImmutableArray.CreateBuilder<TerminalTag>(initialCapacity: 8);
 
             // Group sequentially by attribute
             var currentTagStartIndex = startIndex;
@@ -142,7 +142,7 @@ namespace tterm.Terminal
                 string tagText = new string(buffer, currentTagStartIndex, endIndex - currentTagStartIndex);
                 tags.Add(new TerminalTag(tagText, currentTagAttribute));
             }
-            return tags;
+            return new TerminalTagArray(tags.ToImmutable());
         }
 
         private static bool CanContinueTag(CharAttributes previous, CharAttributes next, char nextC)
