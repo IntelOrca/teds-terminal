@@ -2,24 +2,17 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using MahApps.Metro.Controls;
 using MahApps.Metro.IconPacks;
-using tterm.Ansi;
-using tterm.Extensions;
 using tterm.Terminal;
 using tterm.Ui.Models;
-using tterm.Utility;
 using static tterm.Native.Win32;
 
 namespace tterm.Ui
@@ -33,13 +26,11 @@ namespace tterm.Ui
         private const int MinRows = 4;
 
         private ConfigurationService _configService = new ConfigurationService();
-        private WinPty _pty;
-        private StreamWriter _ptyWriter;
-        private TerminalBuffer _tBuffer = new TerminalBuffer();
         private Size? _charBufferSize;
         private readonly List<TabDataItem> _leftTabs = new List<TabDataItem>();
         private readonly List<TabDataItem> _rightTabs = new List<TabDataItem>();
-        private object _bufferSync = new object();
+
+        private TerminalSession _session;
 
         private IntPtr Hwnd => new WindowInteropHelper(this).Handle;
         private DpiScale Dpi => VisualTreeHelper.GetDpi(this);
@@ -53,9 +44,6 @@ namespace tterm.Ui
             {
                 AllowsTransparency = true;
             }
-
-            txtConsole.Buffer = _tBuffer;
-            txtConsole.Focus();
 
             resizeHint.Visibility = Visibility.Hidden;
 
@@ -99,13 +87,16 @@ namespace tterm.Ui
 
             GetWindowSizeSnap(new Size(Width, Height));
 
-            Profile profile = ExpandVariables(config.Profile);
+            var profile = ExpandVariables(config.Profile);
+            _session = new TerminalSession(tsize, profile);
+            _session.TitleChanged += OnSessionTitleChanged;
+            txtConsole.Session = _session;
+            txtConsole.Focus();
+        }
 
-            _pty = new WinPty(profile, _tBuffer.Size);
-            _ptyWriter = new StreamWriter(_pty.StandardInput);
-            _ptyWriter.AutoFlush = true;
-
-            ConsoleOutputAsync(_pty.StandardOutput);
+        private void OnSessionTitleChanged(object sender, EventArgs e)
+        {
+            _leftTabs[0].Title = _session.Title;
         }
 
         private static Profile ExpandVariables(Profile profile)
@@ -144,124 +135,6 @@ namespace tterm.Ui
                 break;
             }
             return sb.ToString();
-        }
-
-        private void ConsoleOutputAsync(Stream stream)
-        {
-            var sr = new StreamReader(stream);
-            Task.Run(async () =>
-            {
-                try
-                {
-                    int readChars;
-                    do
-                    {
-                        int offset = 0;
-                        var buffer = new char[1024];
-                        readChars = await sr.ReadAsync(buffer, offset, buffer.Length - offset);
-                        if (readChars > 0)
-                        {
-                            var segment = new ArraySegment<char>(buffer, 0, readChars);
-                            var reader = new ArrayReader<char>(segment);
-                            ReceiveOutput(reader);
-
-                            Array.Copy(buffer, reader.Offset, buffer, 0, reader.RemainingLength);
-                            offset = reader.RemainingLength;
-                        }
-                    }
-                    while (readChars != 0);
-                }
-                catch (Exception)
-                {
-                    throw;
-                }
-            });
-        }
-
-        private void ReceiveOutput(ArrayReader<char> reader)
-        {
-            var ansiParser = new AnsiParser();
-            TerminalCode[] codes = ansiParser.Parse(reader);
-            lock (_bufferSync)
-            {
-                foreach (var code in codes)
-                {
-                    ProcessTerminalCode(code);
-                }
-            }
-            RefreshUI();
-        }
-
-        private void RefreshUI()
-        {
-            string text = GetBufferAsString();
-            Dispatcher.Invoke(() =>
-            {
-                txtConsole.UpdateContent();
-            });
-        }
-
-        private string GetBufferAsString()
-        {
-            var sb = new StringBuilder(capacity: 128);
-            for (int y = 0; y < _tBuffer.Size.Rows; y++)
-            {
-                string line = _tBuffer.GetLine(y);
-                sb.AppendLine(line);
-            }
-            return sb.ToString().TrimEnd();
-        }
-
-        private void ProcessTerminalCode(TerminalCode code)
-        {
-            switch (code.Type) {
-            case TerminalCodeType.Text:
-                _tBuffer.Type(code.Text);
-                break;
-            case TerminalCodeType.LineFeed:
-                if (_tBuffer.CursorY == _tBuffer.Size.Rows - 1)
-                {
-                    _tBuffer.ShiftUp();
-                }
-                else
-                {
-                    _tBuffer.CursorY++;
-                }
-                break;
-            case TerminalCodeType.CarriageReturn:
-                _tBuffer.CursorX = 0;
-                break;
-            case TerminalCodeType.CharAttributes:
-                _tBuffer.CurrentCharAttributes = code.CharAttributes;
-                break;
-            case TerminalCodeType.CursorPosition:
-                _tBuffer.CursorX = code.Column;
-                _tBuffer.CursorY = code.Line;
-                break;
-            case TerminalCodeType.CursorUp:
-                _tBuffer.CursorY -= code.Line;
-                break;
-            case TerminalCodeType.CursorCharAbsolute:
-                _tBuffer.CursorX = code.Column;
-                break;
-            case TerminalCodeType.EraseInLine:
-                if (code.Line == 0)
-                {
-                    _tBuffer.ClearBlock(_tBuffer.CursorX, _tBuffer.CursorY, _tBuffer.Size.Columns - 1, _tBuffer.CursorY);
-                }
-                break;
-            case TerminalCodeType.EraseInDisplay:
-                _tBuffer.Clear();
-                _tBuffer.CursorX = 0;
-                _tBuffer.CursorY = 0;
-                break;
-            case TerminalCodeType.SetTitle:
-                Dispatcher.Invoke(() =>
-                {
-                    _leftTabs[0].Title = code.Text;
-                });
-                break;
-            }
         }
 
         private void TextBox_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -312,61 +185,9 @@ namespace tterm.Ui
             }
         }
 
-        private void txtConsole_PreviewKeyDown(object sender, KeyEventArgs e)
-        {
-            string text = string.Empty;
-            switch (e.Key)
-            {
-                case Key.Escape:
-                    text = "\u001B\u001B\u001B";
-                    break;
-                case Key.Back:
-                    text = "\u0008";
-                    break;
-                case Key.Up:
-                    text = "\u001BOA";
-                    break;
-                case Key.Down:
-                    text = "\u001BOB";
-                    break;
-                case Key.Left:
-                    text = "\u001BOD";
-                    break;
-                case Key.Right:
-                    text = "\u001BOC";
-                    break;
-                case Key.Return:
-                    text = "\r";
-                    break;
-                case Key.Space:
-                    text = " ";
-                    break;
-                case Key.Tab:
-                    text = "\t";
-                    break;
-            }
-            if (text != string.Empty)
-            {
-                _ptyWriter.Write(text);
-                e.Handled = true;
-            }
-        }
-
-        private void txtConsole_PreviewTextInput(object sender, TextCompositionEventArgs e)
-        {
-            string text = e.Text;
-            if (string.IsNullOrEmpty(text))
-            {
-                text = e.ControlText;
-            }
-
-            _ptyWriter.Write(text);
-            e.Handled = true;
-        }
-
         private void FixWindowSize()
         {
-            Size fixedSize = GetWindowSizeForBufferSize(_tBuffer.Size);
+            Size fixedSize = GetWindowSizeForBufferSize(_session.Size);
             Width = fixedSize.Width;
             Height = fixedSize.Height;
         }
@@ -465,11 +286,10 @@ namespace tterm.Ui
             rows = Math.Max(rows, MinRows);
 
             var tsize = new TerminalSize(columns, rows);
-            if (_pty != null)
+            if (_session != null)
             {
-                _pty.Size = tsize;
+                _session.Size = tsize;
             }
-            _tBuffer.Size = tsize;
             resizeHint.Hint = tsize;
 
             _configService.Config.Columns = tsize.Columns;

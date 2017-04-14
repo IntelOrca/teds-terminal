@@ -14,9 +14,9 @@ namespace tterm.Terminal
         public int CursorY { get; set; }
         public CharAttributes CurrentCharAttributes { get; set; }
 
-        public TerminalBuffer()
+        public TerminalBuffer(TerminalSize size)
         {
-            Initialise(new TerminalSize(32, 80));
+            Initialise(size);
         }
 
         private void Initialise(TerminalSize size)

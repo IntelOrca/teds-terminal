@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -9,12 +10,12 @@ using tterm.Terminal;
 
 namespace tterm.Ui
 {
-    public class TerminalControl : StackPanel
+    internal class TerminalControl : StackPanel
     {
         private readonly Dictionary<int, Brush> _brushDictionary = new Dictionary<int, Brush>();
         private readonly List<TextBlock> _textBlocks = new List<TextBlock>();
 
-        private TerminalBuffer _buffer;
+        private TerminalSession _session;
 
         private Brush _foreground;
         private Brush _cursorBrush = new SolidColorBrush(Color.FromRgb(150, 150, 150));
@@ -27,14 +28,24 @@ namespace tterm.Ui
 
         private int _lastCursorY;
 
-        public TerminalBuffer Buffer
+        public TerminalSession Session
         {
-            get => _buffer;
+            get => _session;
             set
             {
-                _buffer = value;
+                if (_session != value)
+                {
+                    if (_session != null)
+                    {
+                        _session.OutputReceived -= OnOutputReceived;
+                    }
+                    _session = value;
+                    _session.OutputReceived += OnOutputReceived;
+                }
             }
         }
+
+        public TerminalBuffer Buffer => _session.Buffer;
 
         public Brush Foreground
         {
@@ -253,7 +264,61 @@ namespace tterm.Ui
         protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
         {
             Focus();
-            base.OnPreviewMouseDown(e);
+        }
+
+        protected override void OnPreviewKeyDown(KeyEventArgs e)
+        {
+            string text = string.Empty;
+            switch (e.Key) {
+            case Key.Escape:
+                text = "\u001B\u001B\u001B";
+                break;
+            case Key.Back:
+                text = "\u0008";
+                break;
+            case Key.Up:
+                text = "\u001BOA";
+                break;
+            case Key.Down:
+                text = "\u001BOB";
+                break;
+            case Key.Left:
+                text = "\u001BOD";
+                break;
+            case Key.Right:
+                text = "\u001BOC";
+                break;
+            case Key.Return:
+                text = "\r";
+                break;
+            case Key.Space:
+                text = " ";
+                break;
+            case Key.Tab:
+                text = "\t";
+                break;
+            }
+            if (text != string.Empty)
+            {
+                _session.Write(text);
+                e.Handled = true;
+            }
+        }
+
+        protected override void OnPreviewTextInput(TextCompositionEventArgs e)
+        {
+            string text = e.Text;
+            if (string.IsNullOrEmpty(text))
+            {
+                text = e.ControlText;
+            }
+            _session.Write(text);
+            e.Handled = true;
+        }
+
+        private void OnOutputReceived(object sender, EventArgs e)
+        {
+            Dispatcher.Invoke(UpdateContent);
         }
 
         #endregion
