@@ -264,6 +264,14 @@ namespace tterm.Ui
         protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
         {
             Focus();
+            if (e.RightButton == MouseButtonState.Pressed)
+            {
+                string text = Clipboard.GetText();
+                if (!String.IsNullOrEmpty(text))
+                {
+                    _session.Write(text);
+                }
+            }
         }
 
         protected override void OnPreviewKeyDown(KeyEventArgs e)
