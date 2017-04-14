@@ -69,7 +69,9 @@ namespace tterm.Terminal
             {
                 for (int x = left; x <= right; x++)
                 {
-                    _buffer[GetBufferIndex(x, y)] = ' ';
+                    int index = GetBufferIndex(x, y);
+                    _buffer[index] = ' ';
+                    _bufferAttributes[index] = default(CharAttributes);
                 }
             }
         }
