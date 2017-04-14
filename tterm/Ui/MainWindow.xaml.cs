@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -92,11 +93,51 @@ namespace tterm.Ui
 
             GetWindowSizeSnap(new Size(Width, Height));
 
-            _pty = new WinPty(_tBuffer.Size);
+            Profile profile = ExpandVariables(config.Profile);
+
+            _pty = new WinPty(profile, _tBuffer.Size);
             _ptyWriter = new StreamWriter(_pty.StandardInput);
             _ptyWriter.AutoFlush = true;
 
             ConsoleOutputAsync(_pty.StandardOutput);
+        }
+
+        private static Profile ExpandVariables(Profile profile)
+        {
+            return new Profile()
+            {
+                Command = ExpandVariables(profile.Command),
+                CurrentWorkingDirectory = ExpandVariables(profile.CurrentWorkingDirectory),
+                Arguments = profile.Arguments?.Select(x => ExpandVariables(x)).ToArray()
+            };
+        }
+
+        private static string ExpandVariables(string s)
+        {
+            var sb = new StringBuilder();
+            int index = 0;
+            for (;;)
+            {
+                int start = s.IndexOf('%', index);
+                if (start != -1)
+                {
+                    int end = s.IndexOf('%', start + 1);
+                    if (end != -1)
+                    {
+                        string varName = s.Substring(start + 1, end - start - 1);
+                        string varValue = Environment.GetEnvironmentVariable(varName);
+
+                        sb.Append(s.Substring(index, start - index));
+                        sb.Append(varValue);
+
+                        index = end + 1;
+                        continue;
+                    }
+                }
+                sb.Append(s.Substring(index));
+                break;
+            }
+            return sb.ToString();
         }
 
         private void ConsoleOutputAsync(Stream stream)

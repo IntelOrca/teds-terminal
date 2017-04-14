@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.IO.Pipes;
+using System.Linq;
 using tterm.Terminal;
 using static tterm.Native.Win32;
 using static tterm.Native.WinPty;
@@ -28,7 +29,7 @@ namespace tterm.Ansi
             }
         }
 
-        public WinPty(TerminalSize size, bool separateStdErr = false)
+        public WinPty(Profile profile, TerminalSize size, bool separateStdErr = false)
         {
             _size = size;
 
@@ -51,8 +52,12 @@ namespace tterm.Ansi
                     throw new WinPtrException(err);
                 }
 
-                string homePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                spawnCfg = winpty_spawn_config_new(WINPTY_SPAWN_FLAG_AUTO_SHUTDOWN, @"C:\Windows\System32\cmd.exe", null, homePath, null, out err);
+                string cmdline = null;
+                if (profile.Arguments != null && profile.Arguments.Length > 0)
+                {
+                    cmdline = string.Join(" ", profile.Arguments.Select(x => $"\"{x}\""));
+                }
+                spawnCfg = winpty_spawn_config_new(WINPTY_SPAWN_FLAG_AUTO_SHUTDOWN, profile.Command, cmdline, profile.CurrentWorkingDirectory, null, out err);
                 if (err != IntPtr.Zero)
                 {
                     throw new WinPtrException(err);
