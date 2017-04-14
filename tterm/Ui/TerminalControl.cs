@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Media;
 using tterm.Ansi;
 using tterm.Terminal;
@@ -246,5 +247,15 @@ namespace tterm.Ui
             "#34e2e2",
             "#eeeeec"
         };
+
+        #region Events
+
+        protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
+        {
+            Focus();
+            base.OnPreviewMouseDown(e);
+        }
+
+        #endregion
     }
 }
