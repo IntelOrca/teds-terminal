@@ -177,7 +177,6 @@ namespace tterm.Ui
 
                     var cursorInline = CreateInline(tagB);
                     cursorInline.Background = _cursorBrush;
-                    cursorInline.Foreground = _cursorBrush;
                     inlines.Add(cursorInline);
 
                     inlines.Add(CreateInline(tagC));
