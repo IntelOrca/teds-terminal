@@ -112,14 +112,14 @@ namespace tterm.Terminal
             return line;
         }
 
-        public IList<(string Text, CharAttributes Attributes)> GetFormattedLine(int y)
+        public IList<TerminalTag> GetFormattedLine(int y)
         {
             var buffer = _buffer;
             var bufferAttributes = _bufferAttributes;
             int startIndex = GetBufferIndex(0, y);
             int endIndex = startIndex + _size.Columns;
 
-            var tags = new List<(string, CharAttributes)>();
+            var tags = new List<TerminalTag>();
 
             // Group sequentially by attribute
             var currentTagStartIndex = startIndex;
@@ -130,7 +130,7 @@ namespace tterm.Terminal
                 if (attr != currentTagAttribute)
                 {
                     string tagText = new string(buffer, currentTagStartIndex, i - currentTagStartIndex);
-                    tags.Add((tagText, currentTagAttribute));
+                    tags.Add(new TerminalTag(tagText, currentTagAttribute));
 
                     currentTagStartIndex = i;
                     currentTagAttribute = attr;
@@ -140,7 +140,7 @@ namespace tterm.Terminal
             // Last tag
             {
                 string tagText = new string(buffer, currentTagStartIndex, endIndex - currentTagStartIndex);
-                tags.Add((tagText, currentTagAttribute));
+                tags.Add(new TerminalTag(tagText, currentTagAttribute));
             }
             return tags;
         }

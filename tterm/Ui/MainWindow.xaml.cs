@@ -263,10 +263,10 @@ namespace tterm.Ui
                     text = "\u001BOB";
                     break;
                 case Key.Left:
-                    text = "\u001BOC";
+                    text = "\u001BOD";
                     break;
                 case Key.Right:
-                    text = "\u001BOD";
+                    text = "\u001BOC";
                     break;
                 case Key.Return:
                     text = "\r";

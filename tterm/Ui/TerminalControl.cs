@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using tterm.Ansi;
 using tterm.Terminal;
 
 namespace tterm.Ui
@@ -41,25 +42,53 @@ namespace tterm.Ui
             var buffer = Buffer;
             for (int y = 0; y < buffer.Size.Rows; y++)
             {
+                int x = 0;
                 var lineTags = buffer.GetFormattedLine(y);
                 foreach (var tag in lineTags)
                 {
-                    var run = new Run(tag.Text)
+                    int length = tag.Text.Length;
+                    if (x <= buffer.CursorX && y == buffer.CursorY && x + length > buffer.CursorX)
                     {
-                        Background = GetBackgroundBrush(tag.Attributes.BackgroundColour),
-                        Foreground = GetForegroundBrush(tag.Attributes.ForegroundColour)
-                    };
-                    if ((tag.Attributes.Flags & 1) != 0)
-                    {
-                        run.FontWeight = FontWeights.Bold;
+                        int offset = buffer.CursorX - x;
+                        var tagA = tag.Substring(0, offset);
+                        var tagB = tag.Substring(offset, 1);
+                        var tagC = tag.Substring(offset + 1);
+                        inlines.Add(CreateInline(tagA));
+
+                        var cursorBrush = new SolidColorBrush(Color.FromRgb(150, 150, 150));
+                        var cursorInline = CreateInline(tagB);
+                        cursorInline.Background = cursorBrush;
+                        cursorInline.Foreground = cursorBrush;
+                        inlines.Add(cursorInline);
+
+                        inlines.Add(CreateInline(tagC));
                     }
-                    inlines.Add(run);
+                    else
+                    {
+                        inlines.Add(CreateInline(tag));
+                    }
+
+                    x += tag.Text.Length;
                 }
                 inlines.Add(new LineBreak());
             }
 
             Inlines.Clear();
             Inlines.AddRange(inlines);
+        }
+
+        private Run CreateInline(TerminalTag tag)
+        {
+            var run = new Run(tag.Text)
+            {
+                Background = GetBackgroundBrush(tag.Attributes.BackgroundColour),
+                Foreground = GetForegroundBrush(tag.Attributes.ForegroundColour)
+            };
+            if ((tag.Attributes.Flags & 1) != 0)
+            {
+                run.FontWeight = FontWeights.Bold;
+            }
+            return run;
         }
 
         private Brush GetBackgroundBrush(int id)
