@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace tterm.Ansi
 {
@@ -11,6 +7,16 @@ namespace tterm.Ansi
         public int Flags { get; set; }
         public int BackgroundColour { get; set; }
         public int ForegroundColour { get; set; }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+
+        public override bool Equals(object obj)
+        {
+            return base.Equals(obj);
+        }
 
         public bool Equals(CharAttributes other)
         {

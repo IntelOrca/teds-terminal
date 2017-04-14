@@ -10,7 +10,10 @@ namespace tterm.Ui
 {
     public class TerminalControl : TextBlock
     {
+        private readonly Dictionary<int, Brush> _brushDictionary = new Dictionary<int, Brush>();
+
         private TerminalBuffer _buffer;
+        private Brush _cursorBrush = new SolidColorBrush(Color.FromRgb(150, 150, 150));
 
         public TerminalBuffer Buffer
         {
@@ -55,10 +58,9 @@ namespace tterm.Ui
                         var tagC = tag.Substring(offset + 1);
                         inlines.Add(CreateInline(tagA));
 
-                        var cursorBrush = new SolidColorBrush(Color.FromRgb(150, 150, 150));
                         var cursorInline = CreateInline(tagB);
-                        cursorInline.Background = cursorBrush;
-                        cursorInline.Foreground = cursorBrush;
+                        cursorInline.Background = _cursorBrush;
+                        cursorInline.Foreground = _cursorBrush;
                         inlines.Add(cursorInline);
 
                         inlines.Add(CreateInline(tagC));
@@ -93,20 +95,24 @@ namespace tterm.Ui
 
         private Brush GetBackgroundBrush(int id)
         {
-            Brush result = Background;
-            if (id != 0)
-            {
-                result = new SolidColorBrush(GetColour(id));
-            }
-            return result;
+            return GetBrush(id, Background);
         }
 
         private Brush GetForegroundBrush(int id)
         {
-            Brush result = Foreground;
+            return GetBrush(id, Foreground);
+        }
+
+        private Brush GetBrush(int id, Brush @default)
+        {
+            Brush result = @default;
             if (id != 0)
             {
-                result = new SolidColorBrush(GetColour(id));
+                if (!_brushDictionary.TryGetValue(id, out result))
+                {
+                    result = new SolidColorBrush(GetColour(id));
+                    _brushDictionary.Add(id, result);
+                }
             }
             return result;
         }

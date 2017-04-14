@@ -127,7 +127,7 @@ namespace tterm.Terminal
             for (int i = startIndex + 1; i < endIndex; i++)
             {
                 var attr = bufferAttributes[i];
-                if (attr != currentTagAttribute)
+                if (!CanContinueTag(currentTagAttribute, attr, buffer[i]))
                 {
                     string tagText = new string(buffer, currentTagStartIndex, i - currentTagStartIndex);
                     tags.Add(new TerminalTag(tagText, currentTagAttribute));
@@ -143,6 +143,18 @@ namespace tterm.Terminal
                 tags.Add(new TerminalTag(tagText, currentTagAttribute));
             }
             return tags;
+        }
+
+        private static bool CanContinueTag(CharAttributes previous, CharAttributes next, char nextC)
+        {
+            if (nextC == ' ')
+            {
+                return previous.BackgroundColour == next.BackgroundColour;
+            }
+            else
+            {
+                return previous == next;
+            }
         }
 
         public bool IsInBuffer(int x, int y)
