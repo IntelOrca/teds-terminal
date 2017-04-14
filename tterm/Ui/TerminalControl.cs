@@ -277,34 +277,44 @@ namespace tterm.Ui
         protected override void OnPreviewKeyDown(KeyEventArgs e)
         {
             string text = string.Empty;
-            switch (e.Key) {
-            case Key.Escape:
-                text = "\u001B\u001B\u001B";
-                break;
-            case Key.Back:
-                text = "\u0008";
-                break;
-            case Key.Up:
-                text = "\u001BOA";
-                break;
-            case Key.Down:
-                text = "\u001BOB";
-                break;
-            case Key.Left:
-                text = "\u001BOD";
-                break;
-            case Key.Right:
-                text = "\u001BOC";
-                break;
-            case Key.Return:
-                text = "\r";
-                break;
-            case Key.Space:
-                text = " ";
-                break;
-            case Key.Tab:
-                text = "\t";
-                break;
+            switch (e.Key)
+            {
+                case Key.Escape:
+                    text = "\u001B\u001B\u001B";
+                    break;
+                case Key.Back:
+                    text = C0.BS.ToString();
+                    break;
+                case Key.Delete:
+                    text = C0.ESC + "[3~";
+                    break;
+                case Key.Up:
+                    text = C0.ESC + "[A";
+                    break;
+                case Key.Down:
+                    text = C0.ESC + "[B";
+                    break;
+                case Key.Right:
+                    text = C0.ESC + "[C";
+                    break;
+                case Key.Left:
+                    text = C0.ESC + "[D";
+                    break;
+                case Key.Home:
+                    text = C0.ESC + "[H";
+                    break;
+                case Key.End:
+                    text = C0.ESC + "[F";
+                    break;
+                case Key.Return:
+                    text = "\r";
+                    break;
+                case Key.Space:
+                    text = " ";
+                    break;
+                case Key.Tab:
+                    text = "\t";
+                    break;
             }
             if (text != string.Empty)
             {
