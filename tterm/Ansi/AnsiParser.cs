@@ -537,6 +537,8 @@ namespace tterm.Ansi
             case 'l':
                 Emit(TerminalCodeType.ResetMode);
                 return true;
+            case 'n':
+                return true;
             case 'm':
                 Emit(new TerminalCode(TerminalCodeType.CharAttributes, GetCharAttributes()));
                 return true;
