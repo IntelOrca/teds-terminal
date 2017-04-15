@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Immutable;
+using System.Windows;
 using tterm.Ansi;
 
 namespace tterm.Terminal
 {
-    public class TerminalBuffer
+    internal class TerminalBuffer
     {
         private char[] _buffer;
         private CharAttributes[] _bufferAttributes;
@@ -13,6 +14,7 @@ namespace tterm.Terminal
         public int CursorX { get; set; }
         public int CursorY { get; set; }
         public CharAttributes CurrentCharAttributes { get; set; }
+        public TerminalSelection Selection { get; set; }
 
         public TerminalBuffer(TerminalSize size)
         {
@@ -108,10 +110,54 @@ namespace tterm.Terminal
             }
         }
 
-        public string GetLine(int y)
+        public string GetText(int y)
         {
             string line = new string(_buffer, GetBufferIndex(0, y), _size.Columns);
             return line;
+        }
+
+        public string GetText(int x, int y, int length)
+        {
+            if (x + length > _size.Columns)
+            {
+                throw new ArgumentException("Range overflows line length.", nameof(length));
+            }
+
+            int startIndex = GetBufferIndex(x, y);
+            string line = new string(_buffer, startIndex, length);
+            return line;
+        }
+
+        public string[] GetSelectionText()
+        {
+            var selection = Selection;
+            int left = Math.Min(selection.Start.Column, selection.End.Column);
+            int right = Math.Max(selection.Start.Column, selection.End.Column);
+            int top = Math.Min(selection.Start.Row, selection.End.Row);
+            int bottom = Math.Max(selection.Start.Row, selection.End.Row);
+            return GetText(left, top, right, bottom);
+        }
+
+        public string[] GetText(int left, int top, int right, int bottom)
+        {
+            int width = right - left + 1;
+            int height = bottom - top + 1;
+            string[] result = new string[height];
+            for (int i = 0; i < height; i++)
+            {
+                result[i] = GetText(left, top + i, width);
+            }
+            return result;
+        }
+
+        public void CopySelection()
+        {
+            string[] selectionText = GetSelectionText();
+            string text = String.Join(Environment.NewLine, selectionText);
+            var dataObject = new DataObject();
+            dataObject.SetText(text);
+            dataObject.SetData("MSDEVColumnSelect", true);
+            Clipboard.SetDataObject(dataObject, copy: true);
         }
 
         public TerminalTagArray GetFormattedLine(int y)
@@ -125,10 +171,10 @@ namespace tterm.Terminal
 
             // Group sequentially by attribute
             var currentTagStartIndex = startIndex;
-            var currentTagAttribute = bufferAttributes[startIndex];
+            var currentTagAttribute = GetAttributesAt(0, y, startIndex);
             for (int i = startIndex + 1; i < endIndex; i++)
             {
-                var attr = bufferAttributes[i];
+                var attr = GetAttributesAt(i - startIndex, y, i);
                 if (!CanContinueTag(currentTagAttribute, attr, buffer[i]))
                 {
                     string tagText = new string(buffer, currentTagStartIndex, i - currentTagStartIndex);
@@ -145,6 +191,38 @@ namespace tterm.Terminal
                 tags.Add(new TerminalTag(tagText, currentTagAttribute));
             }
             return new TerminalTagArray(tags.ToImmutable());
+        }
+
+        private CharAttributes GetAttributesAt(int x, int y, int index)
+        {
+            CharAttributes attr = _bufferAttributes[index];
+            if (x == CursorX && y == CursorY)
+            {
+                attr.BackgroundColour = 15;
+            }
+            else if (IsPointInSelection(x, y))
+            {
+                attr.BackgroundColour = 8;
+            }
+            return attr;
+        }
+
+        private bool IsPointInSelection(int x, int y)
+        {
+            var selection = Selection;
+            if (selection == null)
+            {
+                return false;
+            }
+            else
+            {
+                int left = Math.Min(selection.Start.Column, selection.End.Column);
+                int right = Math.Max(selection.Start.Column, selection.End.Column);
+                int top = Math.Min(selection.Start.Row, selection.End.Row);
+                int bottom = Math.Max(selection.Start.Row, selection.End.Row);
+                return (x >= left && x <= right &&
+                        y >= top && y <= bottom);
+            }
         }
 
         private static bool CanContinueTag(CharAttributes previous, CharAttributes next, char nextC)
@@ -167,6 +245,11 @@ namespace tterm.Terminal
         private int GetBufferIndex(int x, int y)
         {
             return x + (y * _size.Columns);
+        }
+
+        private TerminalPoint GetBufferPoint(int index)
+        {
+            return new TerminalPoint(index % _size.Columns, index % _size.Columns);
         }
     }
 }

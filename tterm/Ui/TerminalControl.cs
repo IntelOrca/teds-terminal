@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -7,10 +10,11 @@ using System.Windows.Input;
 using System.Windows.Media;
 using tterm.Ansi;
 using tterm.Terminal;
+using SelectionMode = tterm.Terminal.SelectionMode;
 
 namespace tterm.Ui
 {
-    internal class TerminalControl : StackPanel
+    internal class TerminalControl : Canvas
     {
         private readonly Dictionary<int, Brush> _brushDictionary = new Dictionary<int, Brush>();
         private readonly List<TextBlock> _textBlocks = new List<TextBlock>();
@@ -18,7 +22,6 @@ namespace tterm.Ui
         private TerminalSession _session;
 
         private Brush _foreground;
-        private Brush _cursorBrush = new SolidColorBrush(Color.FromRgb(150, 150, 150));
 
         private FontFamily _fontFamily;
         private double _fontSize;
@@ -26,6 +29,7 @@ namespace tterm.Ui
         private FontWeight _fontWeight;
         private FontStretch _fontStretch;
 
+        private Size? _charSize;
         private int _lastCursorY;
 
         public TerminalSession Session
@@ -82,9 +86,26 @@ namespace tterm.Ui
         {
             get => _fontWeight;
         }
+
         public FontStretch FontStretch
         {
             get => _fontStretch;
+        }
+
+        private DpiScale Dpi => VisualTreeHelper.GetDpi(this);
+
+        public Size CharSize
+        {
+            get
+            {
+                if (!_charSize.HasValue)
+                {
+                    var charSize = MeasureString(" ");
+                    charSize.Height = Math.Ceiling(charSize.Height);
+                    _charSize = charSize;
+                }
+                return _charSize.Value;
+            }
         }
 
         static TerminalControl()
@@ -103,7 +124,10 @@ namespace tterm.Ui
             _fontStretch = FontStretches.Normal;
             Focusable = true;
             FocusVisualStyle = null;
+            SnapsToDevicePixels = true;
         }
+
+        #region Layout
 
         private TextBlock CreateTextBlock()
         {
@@ -115,20 +139,104 @@ namespace tterm.Ui
                 FontSize = _fontSize,
                 FontStyle = _fontStyle,
                 FontStretch = _fontStretch,
-                FontWeight = _fontWeight
+                FontWeight = _fontWeight,
+                SnapsToDevicePixels = true
             };
             return textBlock;
         }
 
         private void EnsureLineCount(int lineCount)
         {
-            while (_textBlocks.Count < lineCount)
+            if (_textBlocks.Count < lineCount)
             {
-                var textBlock = CreateTextBlock();
-                _textBlocks.Add(textBlock);
-                Children.Add(textBlock);
+                while (_textBlocks.Count < lineCount)
+                {
+                    var textBlock = CreateTextBlock();
+                    _textBlocks.Add(textBlock);
+                    Children.Add(textBlock);
+                }
+                AlignTextBlocks();
             }
         }
+
+        private void AlignTextBlocks()
+        {
+            int y = 0;
+            int lineHeight = (int)CharSize.Height;
+            for (int i = 0; i < _textBlocks.Count; i++)
+            {
+                var textBlock = _textBlocks[i];
+                Canvas.SetTop(textBlock, y);
+                Canvas.SetBottom(textBlock, y + lineHeight);
+                Canvas.SetLeft(textBlock, 0);
+                Canvas.SetRight(textBlock, ActualWidth);
+                y += lineHeight;
+            }
+        }
+
+        private Size MeasureString(string candidate)
+        {
+            var typeface = new Typeface(FontFamily, FontStyle, FontWeight, FontStretch);
+            var formattedText = new FormattedText(
+                candidate,
+                CultureInfo.CurrentUICulture,
+                FlowDirection.LeftToRight,
+                typeface,
+                FontSize,
+                Brushes.Black,
+                Dpi.PixelsPerDip);
+
+            var result = new Size(formattedText.WidthIncludingTrailingWhitespace, formattedText.Height);
+            Debug.Assert(result.Width > 0);
+            Debug.Assert(result.Height > 0);
+            return result;
+        }
+
+        private TextBlock GetTextBlockAt(Point pos, out int row)
+        {
+            var ftb = _textBlocks.FirstOrDefault();
+            if (ftb != null)
+            {
+                row = (int)(pos.Y / ftb.ActualHeight);
+                if (_textBlocks.Count > row)
+                {
+                    return _textBlocks[row];
+                }
+            }
+            row = 0;
+            return null;
+        }
+
+        private TerminalPoint GetBufferCoordinates(Point pos)
+        {
+            TextBlock tb = GetTextBlockAt(pos, out int row);
+            pos = TranslatePoint(pos, tb);
+            int col = 0;
+            double left = 0;
+            var textPointer = tb.ContentStart;
+            while (textPointer != null)
+            {
+                Rect rect = textPointer.GetCharacterRect(LogicalDirection.Forward);
+                if (rect.X > left)
+                {
+                    rect.Width = rect.X - left;
+                    rect.X = left;
+                    if (pos.X >= rect.Left && pos.X < rect.Right)
+                    {
+                        break;
+                    }
+
+                    left = rect.Right;
+                    col++;
+                }
+                textPointer = textPointer.GetNextInsertionPosition(LogicalDirection.Forward);
+            }
+            return new TerminalPoint(col, row);
+        }
+
+        #endregion
+
+        #region Render
 
         public void UpdateContent()
         {
@@ -160,33 +268,13 @@ namespace tterm.Ui
             textBlock.Tag = lineTags;
         }
 
-        private List<Inline> GetInlines(int y, TerminalTagArray lineTags)
+        private Inline[] GetInlines(int y, TerminalTagArray lineTags)
         {
-            var inlines = new List<Inline>();
-            int x = 0;
+            var inlines = new Inline[lineTags.Length];
+            int i = 0;
             foreach (var tag in lineTags)
             {
-                int length = tag.Text.Length;
-                if (x <= Buffer.CursorX && y == Buffer.CursorY && x + length > Buffer.CursorX)
-                {
-                    int offset = Buffer.CursorX - x;
-                    var tagA = tag.Substring(0, offset);
-                    var tagB = tag.Substring(offset, 1);
-                    var tagC = tag.Substring(offset + 1);
-                    inlines.Add(CreateInline(tagA));
-
-                    var cursorInline = CreateInline(tagB);
-                    cursorInline.Background = _cursorBrush;
-                    inlines.Add(cursorInline);
-
-                    inlines.Add(CreateInline(tagC));
-                }
-                else
-                {
-                    inlines.Add(CreateInline(tag));
-                }
-
-                x += tag.Text.Length;
+                inlines[i++] = CreateInline(tag);
             }
             return inlines;
         }
@@ -258,18 +346,75 @@ namespace tterm.Ui
             "#eeeeec"
         };
 
+        #endregion
+
+        #region Selection
+
+        private bool IsSelecting => Buffer.Selection != null;
+
+        private void ClearSelection()
+        {
+            Buffer.Selection = null;
+            UpdateContent();
+        }
+
+        private void StartSelectionAt(TerminalPoint startPoint)
+        {
+            Buffer.Selection = new TerminalSelection(SelectionMode.Block, startPoint, startPoint);
+            UpdateContent();
+        }
+
+        private void EndSelectionAt(TerminalPoint endPoint)
+        {
+            if (Buffer.Selection != null)
+            {
+                var startPoint = Buffer.Selection.Start;
+                Buffer.Selection = new TerminalSelection(SelectionMode.Block, startPoint, endPoint);
+                UpdateContent();
+            }
+        }
+
+        #endregion
+
         #region Events
+
+        protected override Size ArrangeOverride(Size arrangeSize)
+        {
+            AlignTextBlocks();
+            return base.ArrangeOverride(arrangeSize);
+        }
 
         protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
         {
             Focus();
-            if (e.RightButton == MouseButtonState.Pressed)
+            if (e.LeftButton == MouseButtonState.Pressed)
             {
-                string text = Clipboard.GetText();
-                if (!String.IsNullOrEmpty(text))
+                var pos = e.GetPosition(this);
+                var point = GetBufferCoordinates(pos);
+                StartSelectionAt(point);
+            }
+            else if (e.MiddleButton == MouseButtonState.Pressed ||
+                     e.RightButton == MouseButtonState.Pressed)
+            {
+                if (Buffer.Selection != null)
                 {
-                    _session.Write(text);
+                    Buffer.CopySelection();
+                    ClearSelection();
                 }
+                else
+                {
+                    _session.Paste();
+                }
+            }
+        }
+
+        protected override void OnPreviewMouseMove(MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                var pos = e.GetPosition(this);
+                var point = GetBufferCoordinates(pos);
+                EndSelectionAt(point);
             }
         }
 
@@ -281,6 +426,15 @@ namespace tterm.Ui
             if (modifiers.HasFlag(ModifierKeys.Alt)) modCode |= 2;
             if (modifiers.HasFlag(ModifierKeys.Control)) modCode |= 4;
             if (modifiers.HasFlag(ModifierKeys.Windows)) modCode |= 8;
+
+            if (IsSelecting)
+            {
+                ClearSelection();
+                if (e.Key == Key.Escape)
+                {
+                    return;
+                }
+            }
 
             string text = string.Empty;
             switch (e.Key)

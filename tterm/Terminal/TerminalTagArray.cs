@@ -10,6 +10,8 @@ namespace tterm.Terminal
         private readonly ImmutableArray<TerminalTag> _tags;
         private readonly int _hash;
 
+        public int Length => _tags.Length;
+
         public TerminalTagArray(ImmutableArray<TerminalTag> tags)
         {
             _tags = tags;

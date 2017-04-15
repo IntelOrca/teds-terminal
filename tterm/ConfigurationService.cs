@@ -25,7 +25,11 @@ namespace tterm
                 if (File.Exists(_jsonPath))
                 {
                     string json = File.ReadAllText(_jsonPath);
-                    Config = JsonConvert.DeserializeObject<Config>(json);
+                    var config = JsonConvert.DeserializeObject<Config>(json);
+                    if (config != null)
+                    {
+                        Config = config;
+                    }
                 }
             }
             catch

@@ -159,5 +159,14 @@ namespace tterm.Terminal
         {
             _ptyWriter.Write(text);
         }
+
+        public void Paste()
+        {
+            string text = Clipboard.GetText();
+            if (!String.IsNullOrEmpty(text))
+            {
+                Write(text);
+            }
+        }
     }
 }
