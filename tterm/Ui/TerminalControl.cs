@@ -380,6 +380,7 @@ namespace tterm.Ui
 
         protected override Size ArrangeOverride(Size arrangeSize)
         {
+            _charSize = null;
             AlignTextBlocks();
             return base.ArrangeOverride(arrangeSize);
         }
