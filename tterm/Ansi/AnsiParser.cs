@@ -33,24 +33,24 @@ namespace tterm.Ansi
             while (reader.TryRead(out char ch))
             {
                 int code = ch;
-                if (0xD800 <= code && code <= 0xDBFF)
-                {
-                    // we got a surrogate high
-                    // get surrogate low (next 2 bytes)
-                    if (!reader.TryPeek(out char low))
-                    {
-                        // end of data stream, save surrogate high
-                        // this._terminal.surrogate_high = ch;
-                        continue;
-                    }
-                    code = ((code - 0xD800) * 0x400) + (low - 0xDC00) + 0x10000;
-                    // ch += low;
-                }
-                // surrogate low - already handled above
-                if (0xDC00 <= code && code <= 0xDFFF)
-                {
-                    continue;
-                }
+                // if (0xD800 <= code && code <= 0xDBFF)
+                // {
+                //     // we got a surrogate high
+                //     // get surrogate low (next 2 bytes)
+                //     if (!reader.TryPeek(out char low))
+                //     {
+                //         // end of data stream, save surrogate high
+                //         // this._terminal.surrogate_high = ch;
+                //         continue;
+                //     }
+                //     code = ((code - 0xD800) * 0x400) + (low - 0xDC00) + 0x10000;
+                //     // ch += low;
+                // }
+                // // surrogate low - already handled above
+                // if (0xDC00 <= code && code <= 0xDFFF)
+                // {
+                //     continue;
+                // }
 
                 switch (_state) {
                 case ParserState.Normal:

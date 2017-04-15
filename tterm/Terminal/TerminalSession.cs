@@ -51,7 +51,7 @@ namespace tterm.Terminal
         {
             Buffer = new TerminalBuffer(size);
             _pty = new WinPty(profile, size);
-            _ptyWriter = new StreamWriter(_pty.StandardInput)
+            _ptyWriter = new StreamWriter(_pty.StandardInput, Encoding.UTF8)
             {
                 AutoFlush = true
             };
@@ -60,7 +60,7 @@ namespace tterm.Terminal
 
         private void ConsoleOutputAsync(Stream stream)
         {
-            var sr = new StreamReader(stream);
+            var sr = new StreamReader(stream, Encoding.UTF8);
             Task.Run(async () =>
             {
                 try
