@@ -116,7 +116,9 @@
     <Compile Include="Ui\TabBar.xaml.cs">
       <DependentUpon>TabBar.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Ui\TerminalColourHelper.cs" />
     <Compile Include="Ui\TerminalControl.cs" />
+    <Compile Include="Ui\TerminalControlLine.cs" />
     <Compile Include="Utility\ArrayReader.cs" />
     <Compile Include="Extensions\ArraySegmentExtensions.cs" />
     <Compile Include="Native\Win32.cs" />

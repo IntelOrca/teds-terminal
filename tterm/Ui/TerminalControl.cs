@@ -16,12 +16,10 @@ namespace tterm.Ui
 {
     internal class TerminalControl : Canvas
     {
-        private readonly Dictionary<int, Brush> _brushDictionary = new Dictionary<int, Brush>();
-        private readonly List<TextBlock> _textBlocks = new List<TextBlock>();
+        private readonly TerminalColourHelper _colourHelper = new TerminalColourHelper();
+        private readonly List<TerminalControlLine> _lines = new List<TerminalControlLine>();
 
         private TerminalSession _session;
-
-        private Brush _foreground;
 
         private FontFamily _fontFamily;
         private double _fontSize;
@@ -51,11 +49,6 @@ namespace tterm.Ui
 
         public TerminalBuffer Buffer => _session.Buffer;
 
-        public Brush Foreground
-        {
-            get => _foreground;
-        }
-
         public FontFamily FontFamily
         {
             get => _fontFamily;
@@ -69,7 +62,7 @@ namespace tterm.Ui
                 if (_fontSize != value)
                 {
                     _fontSize = value;
-                    foreach (TextBlock textBlock in _textBlocks)
+                    foreach (var textBlock in _lines)
                     {
                         textBlock.FontSize = value;
                     }
@@ -101,7 +94,7 @@ namespace tterm.Ui
                 if (!_charSize.HasValue)
                 {
                     var charSize = MeasureString(" ");
-                    charSize.Height = Math.Ceiling(charSize.Height);
+                    charSize.Height = Math.Floor(charSize.Height);
                     _charSize = charSize;
                 }
                 return _charSize.Value;
@@ -116,7 +109,6 @@ namespace tterm.Ui
         public TerminalControl()
         {
             Background = new BrushConverter().ConvertFromString("#FF1E1E1E") as Brush;
-            _foreground = new BrushConverter().ConvertFromString("#FFCCCCCC") as Brush;
             _fontFamily = new FontFamily("Consolas");
             _fontSize = 20;
             _fontStyle = FontStyles.Normal;
@@ -129,30 +121,26 @@ namespace tterm.Ui
 
         #region Layout
 
-        private TextBlock CreateTextBlock()
+        private TerminalControlLine CreateLine()
         {
-            var textBlock = new TextBlock()
+            var line = new TerminalControlLine()
             {
-                Background = Background,
-                Foreground = _foreground,
-                FontFamily = _fontFamily,
+                Typeface = new Typeface(_fontFamily, _fontStyle, _fontWeight, _fontStretch),
                 FontSize = _fontSize,
-                FontStyle = _fontStyle,
-                FontStretch = _fontStretch,
-                FontWeight = _fontWeight,
+                ColourHelper = _colourHelper,
                 SnapsToDevicePixels = true
             };
-            return textBlock;
+            return line;
         }
 
         private void EnsureLineCount(int lineCount)
         {
-            if (_textBlocks.Count < lineCount)
+            if (_lines.Count < lineCount)
             {
-                while (_textBlocks.Count < lineCount)
+                while (_lines.Count < lineCount)
                 {
-                    var textBlock = CreateTextBlock();
-                    _textBlocks.Add(textBlock);
+                    var textBlock = CreateLine();
+                    _lines.Add(textBlock);
                     Children.Add(textBlock);
                 }
                 AlignTextBlocks();
@@ -163,9 +151,9 @@ namespace tterm.Ui
         {
             int y = 0;
             int lineHeight = (int)CharSize.Height;
-            for (int i = 0; i < _textBlocks.Count; i++)
+            for (int i = 0; i < _lines.Count; i++)
             {
-                var textBlock = _textBlocks[i];
+                var textBlock = _lines[i];
                 Canvas.SetTop(textBlock, y);
                 Canvas.SetBottom(textBlock, y + lineHeight);
                 Canvas.SetLeft(textBlock, 0);
@@ -192,46 +180,28 @@ namespace tterm.Ui
             return result;
         }
 
-        private TextBlock GetTextBlockAt(Point pos, out int row)
+        private TerminalControlLine GetLineAt(Point pos, out int row)
         {
-            var ftb = _textBlocks.FirstOrDefault();
-            if (ftb != null)
+            TerminalControlLine result = null;
+            row = (int)(pos.Y / CharSize.Height);
+            if (_lines.Count > row)
             {
-                row = (int)(pos.Y / ftb.ActualHeight);
-                if (_textBlocks.Count > row)
-                {
-                    return _textBlocks[row];
-                }
+                result = _lines[row];
             }
-            row = 0;
-            return null;
+            return result;
         }
 
-        private TerminalPoint GetBufferCoordinates(Point pos)
+        private TerminalPoint? GetBufferCoordinates(Point pos)
         {
-            TextBlock tb = GetTextBlockAt(pos, out int row);
-            pos = TranslatePoint(pos, tb);
-            int col = 0;
-            double left = 0;
-            var textPointer = tb.ContentStart;
-            while (textPointer != null)
+            TerminalPoint? result = null;
+            TerminalControlLine line = GetLineAt(pos, out int row);
+            if (line != null)
             {
-                Rect rect = textPointer.GetCharacterRect(LogicalDirection.Forward);
-                if (rect.X > left)
-                {
-                    rect.Width = rect.X - left;
-                    rect.X = left;
-                    if (pos.X >= rect.Left && pos.X < rect.Right)
-                    {
-                        break;
-                    }
-
-                    left = rect.Right;
-                    col++;
-                }
-                textPointer = textPointer.GetNextInsertionPosition(LogicalDirection.Forward);
+                pos = TranslatePoint(pos, line);
+                int col = line.GetColumnAt(pos);
+                result = new TerminalPoint(col, row);
             }
-            return new TerminalPoint(col, row);
+            return result;
         }
 
         #endregion
@@ -251,100 +221,8 @@ namespace tterm.Ui
 
         private void UpdateLine(int y)
         {
-            var textBlock = _textBlocks[y];
-
-            var lineTags = Buffer.GetFormattedLine(y);
-            if (textBlock.Tag != null && y != _lastCursorY && y != Buffer.CursorY)
-            {
-                if ((TerminalTagArray)textBlock.Tag == lineTags)
-                {
-                    return;
-                }
-            }
-
-            var inlines = GetInlines(y, lineTags);
-            textBlock.Inlines.Clear();
-            textBlock.Inlines.AddRange(inlines);
-            textBlock.Tag = lineTags;
+            _lines[y].Tags = Buffer.GetFormattedLine(y);
         }
-
-        private Inline[] GetInlines(int y, TerminalTagArray lineTags)
-        {
-            var inlines = new Inline[lineTags.Length];
-            int i = 0;
-            foreach (var tag in lineTags)
-            {
-                inlines[i++] = CreateInline(tag);
-            }
-            return inlines;
-        }
-
-        private Run CreateInline(TerminalTag tag)
-        {
-            var run = new Run(tag.Text)
-            {
-                Background = GetBackgroundBrush(tag.Attributes.BackgroundColour),
-                Foreground = GetForegroundBrush(tag.Attributes.ForegroundColour)
-            };
-            if ((tag.Attributes.Flags & 1) != 0)
-            {
-                run.FontWeight = FontWeights.Bold;
-            }
-            return run;
-        }
-
-        private Brush GetBackgroundBrush(int id)
-        {
-            return GetBrush(id, Background);
-        }
-
-        private Brush GetForegroundBrush(int id)
-        {
-            return GetBrush(id, Foreground);
-        }
-
-        private Brush GetBrush(int id, Brush @default)
-        {
-            Brush result = @default;
-            if (id != 0)
-            {
-                if (!_brushDictionary.TryGetValue(id, out result))
-                {
-                    result = new SolidColorBrush(GetColour(id));
-                    _brushDictionary.Add(id, result);
-                }
-            }
-            return result;
-        }
-
-        private Color GetColour(int id)
-        {
-            return (Color)ColorConverter.ConvertFromString(TangoColours[id % 16]);
-        }
-
-        // Colors 0-15
-        private readonly static string[] TangoColours =
-        {
-            // dark:
-            "#2e3436",
-            "#cc0000",
-            "#4e9a06",
-            "#c4a000",
-            "#3465a4",
-            "#75507b",
-            "#06989a",
-            "#d3d7cf",
-
-            // bright:
-            "#555753",
-            "#ef2929",
-            "#8ae234",
-            "#fce94f",
-            "#729fcf",
-            "#ad7fa8",
-            "#34e2e2",
-            "#eeeeec"
-        };
 
         #endregion
 
@@ -392,7 +270,10 @@ namespace tterm.Ui
             {
                 var pos = e.GetPosition(this);
                 var point = GetBufferCoordinates(pos);
-                StartSelectionAt(point);
+                if (point.HasValue)
+                {
+                    StartSelectionAt(point.Value);
+                }
             }
             else if (e.MiddleButton == MouseButtonState.Pressed ||
                      e.RightButton == MouseButtonState.Pressed)
@@ -415,7 +296,10 @@ namespace tterm.Ui
             {
                 var pos = e.GetPosition(this);
                 var point = GetBufferCoordinates(pos);
-                EndSelectionAt(point);
+                if (point.HasValue)
+                {
+                    EndSelectionAt(point.Value);
+                }
             }
         }
 
