@@ -101,12 +101,14 @@
     <Compile Include="Ansi\C0.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="ConfigurationService.cs" />
+    <Compile Include="Extensions\EnumerableExtensions.cs" />
     <Compile Include="Native\WinPty.cs" />
     <Compile Include="Profile.cs" />
     <Compile Include="Terminal\SelectionMode.cs" />
     <Compile Include="Terminal\TerminalPoint.cs" />
     <Compile Include="Terminal\TerminalSelection.cs" />
     <Compile Include="Terminal\TerminalSession.cs" />
+    <Compile Include="Terminal\TerminalSessionManager.cs" />
     <Compile Include="Terminal\TerminalSize.cs" />
     <Compile Include="Terminal\TerminalTag.cs" />
     <Compile Include="Ui\Models\TabDataItem.cs" />

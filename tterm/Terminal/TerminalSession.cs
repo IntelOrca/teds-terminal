@@ -23,17 +23,22 @@ using tterm.Utility;
 
 namespace tterm.Terminal
 {
-    internal class TerminalSession
+    internal class TerminalSession : IDisposable
     {
         private readonly WinPty _pty;
         private readonly StreamWriter _ptyWriter;
         private readonly object _bufferSync = new object();
+        private bool _disposed;
 
         public event EventHandler TitleChanged;
         public event EventHandler OutputReceived;
+        public event EventHandler Finished;
 
         public string Title { get; set; }
         public bool Active { get; set; }
+        public bool Connected { get; private set; }
+        public bool ErrorOccured { get; private set; }
+        public Exception Exception { get; private set; }
 
         public TerminalBuffer Buffer { get; }
 
@@ -55,38 +60,53 @@ namespace tterm.Terminal
             {
                 AutoFlush = true
             };
-            ConsoleOutputAsync(_pty.StandardOutput);
+            RunOutputLoop();
         }
 
-        private void ConsoleOutputAsync(Stream stream)
+        public void Dispose()
         {
-            var sr = new StreamReader(stream, Encoding.UTF8);
-            Task.Run(async () =>
+            if (!_disposed)
             {
-                try
-                {
-                    int readChars;
-                    do
-                    {
-                        int offset = 0;
-                        var buffer = new char[1024];
-                        readChars = await sr.ReadAsync(buffer, offset, buffer.Length - offset);
-                        if (readChars > 0)
-                        {
-                            var segment = new ArraySegment<char>(buffer, 0, readChars);
-                            var reader = new ArrayReader<char>(segment);
-                            ReceiveOutput(reader);
+                _disposed = true;
+                _pty.Dispose();
+            }
+        }
 
-                            Array.Copy(buffer, reader.Offset, buffer, 0, reader.RemainingLength);
-                            offset = reader.RemainingLength;
-                        }
-                    }
-                    while (readChars != 0);
-                }
-                catch (Exception)
+        private async void RunOutputLoop()
+        {
+            try
+            {
+                await ConsoleOutputAsync(_pty.StandardOutput);
+            }
+            catch (Exception ex)
+            {
+                SessionErrored(ex);
+                return;
+            }
+            SessionClosed();
+        }
+
+        private Task ConsoleOutputAsync(Stream stream)
+        {
+            return Task.Run(async delegate
+            {
+                var sr = new StreamReader(stream, Encoding.UTF8);
+                do
                 {
-                    throw;
+                    int offset = 0;
+                    var buffer = new char[1024];
+                    int readChars = await sr.ReadAsync(buffer, offset, buffer.Length - offset);
+                    if (readChars > 0)
+                    {
+                        var segment = new ArraySegment<char>(buffer, 0, readChars);
+                        var reader = new ArrayReader<char>(segment);
+                        ReceiveOutput(reader);
+
+                        Array.Copy(buffer, reader.Offset, buffer, 0, reader.RemainingLength);
+                        offset = reader.RemainingLength;
+                    }
                 }
+                while (!sr.EndOfStream);
             });
         }
 
@@ -167,6 +187,21 @@ namespace tterm.Terminal
             {
                 Write(text);
             }
+        }
+
+        private void SessionErrored(Exception ex)
+        {
+            Connected = false;
+            Exception = ex;
+            Finished?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void SessionClosed()
+        {
+            _pty.Dispose();
+
+            Connected = false;
+            Finished?.Invoke(this, EventArgs.Empty);
         }
     }
 }

@@ -136,19 +136,22 @@ namespace tterm.Ansi
             get => _size;
             set
             {
-                IntPtr err = IntPtr.Zero;
-                try
+                if (_size != value)
                 {
-                    winpty_set_size(_handle, value.Columns, value.Rows, out err);
-                    if (err != IntPtr.Zero)
+                    IntPtr err = IntPtr.Zero;
+                    try
                     {
-                        throw new WinPtrException(err);
+                        winpty_set_size(_handle, value.Columns, value.Rows, out err);
+                        if (err != IntPtr.Zero)
+                        {
+                            throw new WinPtrException(err);
+                        }
+                        _size = value;
                     }
-                    _size = value;
-                }
-                finally
-                {
-                    winpty_error_free(err);
+                    finally
+                    {
+                        winpty_error_free(err);
+                    }
                 }
             }
         }

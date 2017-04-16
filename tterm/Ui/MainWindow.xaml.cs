@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -11,6 +12,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using MahApps.Metro.Controls;
 using MahApps.Metro.IconPacks;
+using tterm.Extensions;
 using tterm.Terminal;
 using tterm.Ui.Models;
 using static tterm.Native.Win32;
@@ -27,10 +29,14 @@ namespace tterm.Ui
 
         private ConfigurationService _configService = new ConfigurationService();
         private Size? _charBufferSize;
-        private readonly List<TabDataItem> _leftTabs = new List<TabDataItem>();
+        private readonly ObservableCollection<TabDataItem> _leftTabs = new ObservableCollection<TabDataItem>();
         private readonly List<TabDataItem> _rightTabs = new List<TabDataItem>();
 
-        private TerminalSession _session;
+        private TerminalSessionManager _sessionMgr = new TerminalSessionManager();
+        private TerminalSession _currentSession;
+        private TabDataItem _currentTab;
+        private TerminalSize _terminalSize;
+        private Profile _defaultProfile;
 
         private IntPtr Hwnd => new WindowInteropHelper(this).Handle;
         private DpiScale Dpi => VisualTreeHelper.GetDpi(this);
@@ -50,23 +56,21 @@ namespace tterm.Ui
             tabBarLeft.DataContext = _leftTabs;
             tabBarRight.DataContext = _rightTabs;
 
-            _leftTabs.Add(new TabDataItem()
-            {
-                IsActive = true,
-                Title = "cmd"
-            });
-            _leftTabs.Add(new TabDataItem()
-            {
-                Title = "powershell"
-            });
-            _leftTabs.Add(new TabDataItem()
+            var newSessionTab = new TabDataItem()
             {
                 Image = PackIconMaterialKind.Plus
-            });
+            };
+            newSessionTab.Click += NewSessionTab_Click;
+            _leftTabs.Add(newSessionTab);
             _rightTabs.Add(new TabDataItem()
             {
                 Image = PackIconMaterialKind.Settings
             });
+        }
+
+        private void NewSessionTab_Click(object sender, EventArgs e)
+        {
+            CreateSession(_defaultProfile);
         }
 
         protected override void OnSourceInitialized(EventArgs e)
@@ -80,23 +84,90 @@ namespace tterm.Ui
         private void StartConsole()
         {
             var config = _configService.Config;
-            var tsize = new TerminalSize(config.Columns, config.Rows);
-            var windowSize = GetWindowSizeForBufferSize(tsize);
+            _terminalSize = new TerminalSize(config.Columns, config.Rows);
+            var windowSize = GetWindowSizeForBufferSize(_terminalSize);
             Width = windowSize.Width;
             Height = windowSize.Height;
 
             GetWindowSizeSnap(new Size(Width, Height));
 
-            var profile = ExpandVariables(config.Profile);
-            _session = new TerminalSession(tsize, profile);
-            _session.TitleChanged += OnSessionTitleChanged;
-            txtConsole.Session = _session;
-            txtConsole.Focus();
+            _defaultProfile = ExpandVariables(config.Profile);
+            CreateSession(_defaultProfile);
+        }
+
+        private void CreateSession(Profile profile)
+        {
+            var session = _sessionMgr.CreateSession(_terminalSize, profile);
+            session.TitleChanged += OnSessionTitleChanged;
+            session.Finished += OnSessionFinished;
+
+            TabDataItem tab = new TabDataItem()
+            {
+                IsActive = true,
+                Title = string.Empty,
+                Session = session
+            };
+            tab.Click += OnSessionTabClick;
+            _leftTabs.Insert(_leftTabs.Count - 1, tab);
+
+            ChangeSession(session, tab);
+        }
+
+        private void OnSessionTabClick(object sender, EventArgs e)
+        {
+            var tab = sender as TabDataItem;
+            var session = tab.Session;
+            ChangeSession(session, tab);
+        }
+
+        private void ChangeSession(TerminalSession session, TabDataItem tab)
+        {
+            if (session != _currentSession)
+            {
+                if (_currentSession != null)
+                {
+                    _currentSession.Active = false;
+                    _currentTab.IsActive = false;
+                }
+
+                _currentSession = session;
+                _currentTab = tab;
+
+                if (session != null)
+                {
+                    session.Active = true;
+                    session.Size = _terminalSize;
+                    tab.IsActive = true;
+                }
+
+                txtConsole.Session = session;
+                txtConsole.Focus();
+            }
         }
 
         private void OnSessionTitleChanged(object sender, EventArgs e)
         {
-            _leftTabs[0].Title = _session.Title;
+            var session = sender as TerminalSession;
+            int index = _sessionMgr.Sessions.IndexOf(session);
+            _leftTabs[index].Title = _currentSession.Title;
+        }
+
+        private void OnSessionFinished(object sender, EventArgs e)
+        {
+            var session = sender as TerminalSession;
+            int index = _leftTabs.IndexOf(x => x.Session == session);
+            _leftTabs.RemoveAt(index);
+
+            var sessions = _sessionMgr.Sessions;
+            if (sessions.Count > 0)
+            {
+                int fallbackIndex = Math.Max(0, index - 1);
+                ChangeSession(sessions[fallbackIndex], _leftTabs[fallbackIndex]);
+            }
+            else
+            {
+                ChangeSession(null, null);
+            }
         }
 
         private static Profile ExpandVariables(Profile profile)
@@ -187,7 +258,7 @@ namespace tterm.Ui
 
         private void FixWindowSize()
         {
-            Size fixedSize = GetWindowSizeForBufferSize(_session.Size);
+            Size fixedSize = GetWindowSizeForBufferSize(_currentSession.Size);
             Width = fixedSize.Width;
             Height = fixedSize.Height;
         }
@@ -286,9 +357,10 @@ namespace tterm.Ui
             rows = Math.Max(rows, MinRows);
 
             var tsize = new TerminalSize(columns, rows);
-            if (_session != null)
+            _terminalSize = tsize;
+            if (_currentSession != null)
             {
-                _session.Size = tsize;
+                _currentSession.Size = tsize;
             }
             resizeHint.Hint = tsize;
 

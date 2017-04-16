@@ -59,7 +59,7 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
             <DataTemplate>
-                <Button />
+                <Button Click="OnTabClick" />
             </DataTemplate>
         </ItemsControl.ItemTemplate>
     </ItemsControl>

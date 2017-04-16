@@ -42,12 +42,16 @@ namespace tterm.Ui
                         _session.OutputReceived -= OnOutputReceived;
                     }
                     _session = value;
-                    _session.OutputReceived += OnOutputReceived;
+                    if (value != null)
+                    {
+                        _session.OutputReceived += OnOutputReceived;
+                    }
+                    UpdateContent();
                 }
             }
         }
 
-        public TerminalBuffer Buffer => _session.Buffer;
+        public TerminalBuffer Buffer => _session?.Buffer;
 
         public FontFamily FontFamily
         {
@@ -86,6 +90,8 @@ namespace tterm.Ui
         }
 
         private DpiScale Dpi => VisualTreeHelper.GetDpi(this);
+
+        private bool IsSessionAvailable => _session != null;
 
         public Size CharSize
         {
@@ -210,13 +216,21 @@ namespace tterm.Ui
 
         public void UpdateContent()
         {
-            int lineCount = Buffer.Size.Rows;
-            EnsureLineCount(lineCount);
-            for (int y = 0; y < lineCount; y++)
+            if (IsSessionAvailable)
             {
-                UpdateLine(y);
+                int lineCount = Buffer.Size.Rows;
+                EnsureLineCount(lineCount);
+                for (int y = 0; y < lineCount; y++)
+                {
+                    UpdateLine(y);
+                }
+                _lastCursorY = Buffer.CursorY;
             }
-            _lastCursorY = Buffer.CursorY;
+            else
+            {
+                _lines.Clear();
+                Children.Clear();
+            }
         }
 
         private void UpdateLine(int y)
@@ -265,6 +279,11 @@ namespace tterm.Ui
 
         protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
         {
+            if (!IsSessionAvailable)
+            {
+                return;
+            }
+
             Focus();
             if (e.LeftButton == MouseButtonState.Pressed)
             {
@@ -292,6 +311,11 @@ namespace tterm.Ui
 
         protected override void OnPreviewMouseMove(MouseEventArgs e)
         {
+            if (!IsSessionAvailable)
+            {
+                return;
+            }
+
             if (e.LeftButton == MouseButtonState.Pressed)
             {
                 var pos = e.GetPosition(this);
@@ -305,6 +329,11 @@ namespace tterm.Ui
 
         protected override void OnPreviewKeyDown(KeyEventArgs e)
         {
+            if (!IsSessionAvailable)
+            {
+                return;
+            }
+
             ModifierKeys modifiers = e.KeyboardDevice.Modifiers;
             int modCode = 0;
             if (modifiers.HasFlag(ModifierKeys.Shift)) modCode |= 1;
@@ -389,6 +418,11 @@ namespace tterm.Ui
 
         protected override void OnPreviewTextInput(TextCompositionEventArgs e)
         {
+            if (!IsSessionAvailable)
+            {
+                return;
+            }
+
             string text = e.Text;
             if (string.IsNullOrEmpty(text))
             {
