@@ -360,6 +360,12 @@ namespace tterm.Ui
                 case Key.End:
                     text = Construct(1, 'F');
                     break;
+                case Key.PageUp:
+                    text = $"{C0.ESC}[5~";
+                    break;
+                case Key.PageDown:
+                    text = $"{C0.ESC}[6~";
+                    break;
                 case Key.Return:
                     text = C0.CR.ToString();
                     break;
