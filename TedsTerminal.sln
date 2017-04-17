@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26228.12
+VisualStudioVersion = 15.0.26403.3
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TedsTerminal", "tterm\tterm.csproj", "{8BF6C7C8-2B7A-4833-9AB7-6C3E39ACD776}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{04F53CB4-2C4A-4B97-B25D-121DD3D1D7D5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tterm", "src\tterm\tterm.csproj", "{8BF6C7C8-2B7A-4833-9AB7-6C3E39ACD776}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,5 +20,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{8BF6C7C8-2B7A-4833-9AB7-6C3E39ACD776} = {04F53CB4-2C4A-4B97-B25D-121DD3D1D7D5}
 	EndGlobalSection
 EndGlobal
