@@ -62,7 +62,7 @@
     <Reference Include="MahApps.Metro.IconPacks.Material">
       <HintPath>..\packages\MahApps.Metro.IconPacks.Material.1.8.0\lib\net46\MahApps.Metro.IconPacks.Material.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+    <Reference Include="Newtonsoft.Json">
       <HintPath>..\packages\Newtonsoft.Json.10.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="PropertyChanged">
@@ -70,12 +70,12 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Collections.Immutable, Version=1.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+    <Reference Include="System.Collections.Immutable">
       <HintPath>..\packages\System.Collections.Immutable.1.3.1\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Core" />
-    <Reference Include="System.ValueTuple, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+    <Reference Include="System.ValueTuple">
       <HintPath>..\packages\System.ValueTuple.4.3.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
     </Reference>
     <Reference Include="System.Windows.Interactivity">
@@ -88,6 +88,9 @@
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="WindowsBase" />
+    <Reference Include="winpty.NET">
+      <HintPath>..\packages\winpty.NET.0.4.2\lib\net40\winpty.NET.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
@@ -102,8 +105,6 @@
     <Compile Include="Config.cs" />
     <Compile Include="ConfigurationService.cs" />
     <Compile Include="Extensions\EnumerableExtensions.cs" />
-    <Compile Include="Native\ConstLPWStrMarshaler.cs" />
-    <Compile Include="Native\WinPty.cs" />
     <Compile Include="Profile.cs" />
     <Compile Include="Terminal\SelectionMode.cs" />
     <Compile Include="Terminal\TerminalPoint.cs" />
@@ -126,6 +127,7 @@
     <Compile Include="Extensions\ArraySegmentExtensions.cs" />
     <Compile Include="Native\Win32.cs" />
     <Compile Include="Terminal\TerminalBuffer.cs" />
+    <Compile Include="Terminal\TerminalTagArray.cs" />
     <Compile Include="Ansi\WinPty.cs" />
     <Page Include="Ui\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -198,12 +200,26 @@
     <Resource Include="..\tterm.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Terminal\TerminalTagArray.cs" />
+    <None Include="winpty\x64\winpty-agent.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="winpty\x64\winpty-debugserver.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="winpty\x64\winpty.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="winpty\x86\winpty-agent.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="winpty\x86\winpty-debugserver.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="winpty\x86\winpty.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>xcopy "$(ProjectDir)..\lib\winpty" "$(TargetDir)winpty" /E /I /Q /Y</PostBuildEvent>
-  </PropertyGroup>
   <Import Project="..\packages\Fody.1.29.4\build\dotnet\Fody.targets" Condition="Exists('..\packages\Fody.1.29.4\build\dotnet\Fody.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>

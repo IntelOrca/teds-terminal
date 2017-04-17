@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using tterm.Terminal;
 using static tterm.Native.Win32;
-using static tterm.Native.WinPty;
+using static winpty.WinPty;
 
 namespace tterm.Ansi
 {
