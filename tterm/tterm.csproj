@@ -102,6 +102,7 @@
     <Compile Include="Config.cs" />
     <Compile Include="ConfigurationService.cs" />
     <Compile Include="Extensions\EnumerableExtensions.cs" />
+    <Compile Include="Native\ConstLPWStrMarshaler.cs" />
     <Compile Include="Native\WinPty.cs" />
     <Compile Include="Profile.cs" />
     <Compile Include="Terminal\SelectionMode.cs" />

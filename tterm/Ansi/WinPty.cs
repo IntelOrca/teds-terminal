@@ -2,6 +2,8 @@
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 using tterm.Terminal;
 using static tterm.Native.Win32;
 using static tterm.Native.WinPty;

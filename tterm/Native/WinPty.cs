@@ -31,12 +31,15 @@ namespace tterm.Native
         public static extern IntPtr winpty_open(IntPtr cfg, out IntPtr err);
 
         [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(ConstLPWStrMarshaler))]
         public static extern string winpty_conin_name(IntPtr wp);
 
         [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(ConstLPWStrMarshaler))]
         public static extern string winpty_conout_name(IntPtr wp);
 
         [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(ConstLPWStrMarshaler))]
         public static extern string winpty_conerr_name(IntPtr wp);
 
         [DllImport("winpty.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
