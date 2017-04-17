@@ -1,0 +1,25 @@
+version: 0.1.0-{build}
+image:
+- Visual Studio 2017
+configuration: Release
+before_build:
+- cmd: >-
+    nuget restore
+after_build:
+- cmd: >-
+    cd bin\Release
+    7z a -tzip -mx9 -mtc=off -r ..\..\artefacts\tterm-v0.1.0.zip *.dll *.exe *.config winpty > nul
+artifacts:
+- path: 'artefacts\tterm-v0.1.0.zip'
+deploy:
+  release: tterm-v0.1.0
+  description: '...'
+  provider: GitHub
+  auth_token:
+    secure: 49K/y43epwh5Sb8uY1l/TbIFRPcEq6fraQaYGS0bgWQJfONznd6hCqPUCg7WSX16
+  artifact: artefacts\tterm-v0.1.0.zip
+  draft: true
+  prerelease: true
+  on:
+    branch: master
+    appveyor_repo_tag: true
