@@ -5,6 +5,8 @@ configuration: Release
 before_build:
 - cmd: >-
     nuget restore
+
+    xcopy /Y /E packages\winpty.NET.0.4.2\content src\tterm
 after_build:
 - cmd: >-
     cd bin\Release
