@@ -10,6 +10,7 @@ before_build:
 after_build:
 - cmd: >-
     cd bin\Release
+
     7z a -tzip -mx9 -mtc=off -r ..\..\artefacts\tterm-v0.1.0.zip *.dll *.exe *.config winpty > nul
 artifacts:
 - path: 'artefacts\tterm-v0.1.0.zip'
