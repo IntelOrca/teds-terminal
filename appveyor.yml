@@ -1,6 +1,14 @@
-version: 0.1.0-{build}
+version: 0.1.1.{build}
 image:
 - Visual Studio 2017
+environment:
+  version: 0.1.1
+assembly_info:
+  patch: true
+  file: AssemblyInfo.*
+  assembly_version: "$(version).0"
+  assembly_file_version: "{version}"
+  assembly_informational_version: "{version}"
 configuration: Release
 before_build:
 - cmd: >-
@@ -11,16 +19,14 @@ after_build:
 - cmd: >-
     cd bin\Release
 
-    7z a -tzip -mx9 -mtc=off -r ..\..\artefacts\tterm-v0.1.0.zip *.dll *.exe *.config winpty > nul
+    7z a -tzip -mx9 -mtc=off -r ..\..\artefacts\tterm-v%version%.zip *.dll *.exe *.config winpty > nul
 artifacts:
-- path: 'artefacts\tterm-v0.1.0.zip'
+- path: 'artefacts\tterm-v$(version).zip'
 deploy:
-  release: tterm-v0.1.0
-  description: '...'
   provider: GitHub
   auth_token:
     secure: 49K/y43epwh5Sb8uY1l/TbIFRPcEq6fraQaYGS0bgWQJfONznd6hCqPUCg7WSX16
-  artifact: artefacts\tterm-v0.1.0.zip
+  artifact: artefacts\tterm-v$(version).zip
   draft: true
   prerelease: true
   on:
