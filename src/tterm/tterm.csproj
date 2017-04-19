@@ -104,6 +104,8 @@
     <Compile Include="Ansi\C0.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="ConfigurationService.cs" />
+    <Compile Include="DefaultProfile.cs" />
+    <Compile Include="EnvironmentVariables.cs" />
     <Compile Include="Extensions\EnumerableExtensions.cs" />
     <Compile Include="Profile.cs" />
     <Compile Include="Terminal\SelectionMode.cs" />

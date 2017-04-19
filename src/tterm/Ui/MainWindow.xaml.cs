@@ -99,14 +99,20 @@ namespace tterm.Ui
         private void StartConsole()
         {
             var config = _configService.Config;
-            _terminalSize = new TerminalSize(config.Columns, config.Rows);
-            var windowSize = GetWindowSizeForBufferSize(_terminalSize);
-            Width = windowSize.Width;
-            Height = windowSize.Height;
+
+            int columns = Math.Max(config.Columns, MinColumns);
+            int rows = Math.Max(config.Rows, MinRows);
+            _terminalSize = new TerminalSize(columns, rows);
+            RenderSize = GetWindowSizeForBufferSize(_terminalSize);
 
             GetWindowSizeSnap(new Size(Width, Height));
 
-            _defaultProfile = ExpandVariables(config.Profile);
+            Profile profile = config.Profile;
+            if (profile == null)
+            {
+                profile = DefaultProfile.Get();
+            }
+            _defaultProfile = ExpandVariables(profile);
             CreateSession(_defaultProfile);
         }
 
