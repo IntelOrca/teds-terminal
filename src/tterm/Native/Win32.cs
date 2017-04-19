@@ -28,6 +28,10 @@ namespace tterm.Native
         public const int SIZE_MAXSHOW = 3;
         public const int SIZE_MAXHIDE = 4;
 
+        public const int SWP_NOMOVE = 0x0002;
+        public const int SWP_NOZORDER = 0x0004;
+        public const int SWP_NOOWNERZORDER = 0x0200;
+
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT
         {
@@ -36,6 +40,9 @@ namespace tterm.Native
             public int right;
             public int bottom;
         }
+
+        [DllImport("user32.dll")]
+        public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
         [DllImport("kernel32.dll")]
         public static extern IntPtr LoadLibrary(string path);

@@ -93,19 +93,13 @@ namespace tterm.Ui
         protected override void OnSourceInitialized(EventArgs e)
         {
             base.OnSourceInitialized(e);
-            StartConsole();
-        }
 
-        private void StartConsole()
-        {
             var config = _configService.Config;
 
             int columns = Math.Max(config.Columns, MinColumns);
             int rows = Math.Max(config.Rows, MinRows);
             _terminalSize = new TerminalSize(columns, rows);
-            RenderSize = GetWindowSizeForBufferSize(_terminalSize);
-
-            GetWindowSizeSnap(new Size(Width, Height));
+            FixWindowSize();
 
             Profile profile = config.Profile;
             if (profile == null)
@@ -279,26 +273,7 @@ namespace tterm.Ui
 
         private void FixWindowSize()
         {
-            Size fixedSize = GetWindowSizeForBufferSize(_currentSession.Size);
-            Width = fixedSize.Width;
-            Height = fixedSize.Height;
-        }
-
-        private Size GetWindowSizeSnap(Size size)
-        {
-            var tsize = GetBufferSizeForWindowSize(size);
-            _terminalSize = tsize;
-            if (_currentSession != null)
-            {
-                _currentSession.Size = tsize;
-            }
-            resizeHint.Hint = tsize;
-
-            _configService.Config.Columns = tsize.Columns;
-            _configService.Config.Rows = tsize.Rows;
-            _configService.Save();
-
-            return GetWindowSizeForBufferSize(tsize);
+            Size = GetWindowSizeForBufferSize(_terminalSize);
         }
 
         private TerminalSize GetBufferSizeForWindowSize(Size size)
@@ -360,7 +335,8 @@ namespace tterm.Ui
 
         protected override Size GetPreferedSize(Size size)
         {
-            return GetWindowSizeSnap(size);
+            var tsize = GetBufferSizeForWindowSize(size);
+            return GetWindowSizeForBufferSize(tsize);
         }
 
         protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
@@ -369,23 +345,26 @@ namespace tterm.Ui
 
             // Reize the current session buffer
             var tsize = GetBufferSizeForWindowSize(sizeInfo.NewSize);
-            _terminalSize = tsize;
-            if (_currentSession != null)
+            if (tsize != _terminalSize)
             {
-                _currentSession.Size = tsize;
-            }
+                _terminalSize = tsize;
+                if (_currentSession != null)
+                {
+                    _currentSession.Size = tsize;
+                }
 
-            if (Ready)
-            {
-                // Save configuration
-                _configService.Config.Columns = tsize.Columns;
-                _configService.Config.Rows = tsize.Rows;
-                _configService.Save();
+                if (Ready)
+                {
+                    // Save configuration
+                    _configService.Config.Columns = tsize.Columns;
+                    _configService.Config.Rows = tsize.Rows;
+                    _configService.Save();
 
-                // Update hint overlay
-                resizeHint.Hint = tsize;
-                resizeHint.IsShowing = true;
-                resizeHint.IsShowing = IsResizing;
+                    // Update hint overlay
+                    resizeHint.Hint = tsize;
+                    resizeHint.IsShowing = true;
+                    resizeHint.IsShowing = IsResizing;
+                }
             }
         }
 

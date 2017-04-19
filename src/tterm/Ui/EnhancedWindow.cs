@@ -16,6 +16,22 @@ namespace tterm.Ui
         protected IntPtr Hwnd => _interopHelper.Handle;
         protected DpiScale Dpi => VisualTreeHelper.GetDpi(this);
 
+        public Size Size
+        {
+            get => RenderSize;
+            set
+            {
+                if (value != RenderSize)
+                {
+                    var dpi = Dpi;
+                    int width = (int)(value.Width * dpi.DpiScaleX);
+                    int height = (int)(value.Height * dpi.DpiScaleY);
+                    uint flags = SWP_NOMOVE | SWP_NOZORDER;
+                    SetWindowPos(Hwnd, IntPtr.Zero, 0, 0, width, height, flags);
+                }
+            }
+        }
+
         public EnhancedWindow()
         {
             _interopHelper = new WindowInteropHelper(this);
