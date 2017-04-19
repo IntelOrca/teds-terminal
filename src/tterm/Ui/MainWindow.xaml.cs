@@ -265,34 +265,41 @@ namespace tterm.Ui
 
         private IntPtr WindowProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
-            switch (msg) {
-            case WM_SIZE:
+            switch (msg)
             {
-                uint widthHeight = (uint)lParam.ToInt32();
-                var bounds = new RECT()
-                {
-                    right = (int)(widthHeight & 0xFFFF),
-                    bottom = (int)(widthHeight >> 16),
-                };
+                case WM_SIZE:
+                    {
+                        int type = wParam.ToInt32();
+                        var windowState = WindowState.Minimized;
+                        if ((type == SIZE_MAXIMIZED && WindowState != windowState) ||
+                            (type == SIZE_RESTORED && WindowState == WindowState.Maximized))
+                        {
+                            uint widthHeight = (uint)lParam.ToInt32();
+                            var bounds = new RECT()
+                            {
+                                right = (int)(widthHeight & 0xFFFF),
+                                bottom = (int)(widthHeight >> 16),
+                            };
 
-                ForceWindowRect(bounds);
+                            ForceWindowRect(bounds);
 
-                resizeHint.IsShowing = true;
-                resizeHint.IsShowing = false;
-                break;
-            }
-            case WM_EXITSIZEMOVE:
-                resizeHint.IsShowing = false;
-                break;
-            case WM_SIZING:
-            {
-                resizeHint.IsShowing = true;
+                            resizeHint.IsShowing = true;
+                            resizeHint.IsShowing = false;
+                        }
+                        break;
+                    }
+                case WM_EXITSIZEMOVE:
+                    resizeHint.IsShowing = false;
+                    break;
+                case WM_SIZING:
+                    {
+                        resizeHint.IsShowing = true;
 
-                var bounds = Marshal.PtrToStructure<RECT>(lParam);
-                bounds = SnapWindowRect(bounds, wParam.ToInt32());
-                Marshal.StructureToPtr(bounds, lParam, fDeleteOld: false);
-                break;
-            }
+                        var bounds = Marshal.PtrToStructure<RECT>(lParam);
+                        bounds = SnapWindowRect(bounds, wParam.ToInt32());
+                        Marshal.StructureToPtr(bounds, lParam, fDeleteOld: false);
+                        break;
+                    }
             }
             return IntPtr.Zero;
         }
