@@ -28,6 +28,7 @@ namespace tterm.Ui
         private FontStretch _fontStretch;
 
         private Size? _charSize;
+
         private int _lastCursorY;
 
         public TerminalSession Session
@@ -65,6 +66,7 @@ namespace tterm.Ui
             {
                 if (_fontSize != value)
                 {
+                    _charSize = null;
                     _fontSize = value;
                     foreach (var textBlock in _lines)
                     {

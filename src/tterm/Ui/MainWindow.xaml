@@ -26,8 +26,8 @@
         <local:TabBar x:Name="tabBarLeft" Grid.Row="0" Grid.Column="0" />
         <local:TabBar x:Name="tabBarRight" Grid.Row="0" Grid.Column="1" />
         <Grid Grid.Row="1" Grid.ColumnSpan="2">
-            <local:TerminalControl x:Name="txtConsole"
-                                   PreviewMouseWheel="TextBox_PreviewMouseWheel" />
+            <local:TerminalControl x:Name="terminalControl"
+                                   PreviewMouseWheel="terminalControl_PreviewMouseWheel" />
             <local:ResizeHint x:Name="resizeHint" />
         </Grid>
     </Grid>

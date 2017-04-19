@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
 using MahApps.Metro.IconPacks;
 using tterm.Extensions;
 using tterm.Terminal;
@@ -28,7 +25,6 @@ namespace tterm.Ui
         private bool _ready;
 
         private ConfigurationService _configService = new ConfigurationService();
-        private Size? _charBufferSize;
         private readonly ObservableCollection<TabDataItem> _leftTabs = new ObservableCollection<TabDataItem>();
         private readonly List<TabDataItem> _rightTabs = new List<TabDataItem>();
 
@@ -155,8 +151,8 @@ namespace tterm.Ui
                     tab.IsActive = true;
                 }
 
-                txtConsole.Session = session;
-                txtConsole.Focus();
+                terminalControl.Session = session;
+                terminalControl.Focus();
             }
         }
 
@@ -223,7 +219,7 @@ namespace tterm.Ui
             return sb.ToString();
         }
 
-        private void TextBox_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        private void terminalControl_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
             if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
             {
@@ -231,7 +227,7 @@ namespace tterm.Ui
                 {
                     if (AllowsTransparency)
                     {
-                        var terminal = txtConsole;
+                        var terminal = terminalControl;
                         const double OpacityDelta = 1 / 32.0;
                         if (e.Delta > 0)
                         {
@@ -246,14 +242,13 @@ namespace tterm.Ui
                 }
                 else
                 {
-                    var terminal = txtConsole;
+                    var terminal = terminalControl;
                     const double FontSizeDelta = 2;
                     if (e.Delta > 0)
                     {
                         if (terminal.FontSize < 54)
                         {
                             terminal.FontSize += FontSizeDelta;
-                            _charBufferSize = null;
                             FixWindowSize();
                         }
                     }
@@ -262,7 +257,6 @@ namespace tterm.Ui
                         if (terminal.FontSize > 8)
                         {
                             terminal.FontSize -= FontSizeDelta;
-                            _charBufferSize = null;
                             FixWindowSize();
                         }
                     }
@@ -278,9 +272,9 @@ namespace tterm.Ui
 
         private TerminalSize GetBufferSizeForWindowSize(Size size)
         {
-            Size charSize = GetBufferCharSize();
-            Size consoleOffset = new Size(Math.Max(Width - txtConsole.ActualWidth, 0),
-                                          Math.Max(Height - txtConsole.ActualHeight, 0));
+            Size charSize = terminalControl.CharSize;
+            Size consoleOffset = new Size(Math.Max(Width - terminalControl.ActualWidth, 0),
+                                          Math.Max(Height - terminalControl.ActualHeight, 0));
             Size newConsoleSize = new Size(Math.Max(size.Width - consoleOffset.Width, 0),
                                            Math.Max(size.Height - consoleOffset.Height, 0));
 
@@ -295,41 +289,14 @@ namespace tterm.Ui
 
         private Size GetWindowSizeForBufferSize(TerminalSize size)
         {
-            Size charSize = GetBufferCharSize();
-            Size consoleOffset = new Size(Math.Max(Width - txtConsole.ActualWidth, 0),
-                                          Math.Max(Height - txtConsole.ActualHeight, 0));
+            Size charSize = terminalControl.CharSize;
+            Size consoleOffset = new Size(Math.Max(Width - terminalControl.ActualWidth, 0),
+                                          Math.Max(Height - terminalControl.ActualHeight, 0));
             Size snappedConsoleSize = new Size(size.Columns * charSize.Width,
                                                size.Rows * charSize.Height);
 
             Size result = new Size(Math.Ceiling(snappedConsoleSize.Width + consoleOffset.Width) + 2,
                                    Math.Ceiling(snappedConsoleSize.Height + consoleOffset.Height));
-            return result;
-        }
-
-        private Size GetBufferCharSize()
-        {
-            if (!_charBufferSize.HasValue)
-            {
-                _charBufferSize = MeasureString(" ");
-            }
-            return _charBufferSize.Value;
-        }
-
-        private Size MeasureString(string candidate)
-        {
-            var typeface = new Typeface(txtConsole.FontFamily, txtConsole.FontStyle, txtConsole.FontWeight, txtConsole.FontStretch);
-            var formattedText = new FormattedText(
-                candidate,
-                CultureInfo.CurrentUICulture,
-                FlowDirection.LeftToRight,
-                typeface,
-                txtConsole.FontSize,
-                Brushes.Black,
-                Dpi.PixelsPerDip);
-
-            var result = new Size(formattedText.WidthIncludingTrailingWhitespace, formattedText.Height);
-            Debug.Assert(result.Width > 0);
-            Debug.Assert(result.Height > 0);
             return result;
         }
 
