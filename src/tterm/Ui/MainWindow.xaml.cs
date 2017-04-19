@@ -4,28 +4,28 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
-using MahApps.Metro.Controls;
 using MahApps.Metro.IconPacks;
 using tterm.Extensions;
 using tterm.Terminal;
 using tterm.Ui.Models;
-using static tterm.Native.Win32;
 
 namespace tterm.Ui
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : MetroWindow
+    public partial class MainWindow : EnhancedWindow
     {
         private const int MinColumns = 52;
         private const int MinRows = 4;
+        private const int ReadyDelay = 1000;
+
+        private int _tickInitialised;
+        private bool _ready;
 
         private ConfigurationService _configService = new ConfigurationService();
         private Size? _charBufferSize;
@@ -38,8 +38,19 @@ namespace tterm.Ui
         private TerminalSize _terminalSize;
         private Profile _defaultProfile;
 
-        private IntPtr Hwnd => new WindowInteropHelper(this).Handle;
-        private DpiScale Dpi => VisualTreeHelper.GetDpi(this);
+        public bool Ready
+        {
+            get
+            {
+                // HACK Try and find a more reliable way to check if we are ready.
+                //      This is to prevent the resize hint from showing at startup.
+                if (!_ready)
+                {
+                    _ready = Environment.TickCount > _tickInitialised + ReadyDelay;
+                }
+                return _ready;
+            }
+        }
 
         public MainWindow()
         {
@@ -68,6 +79,12 @@ namespace tterm.Ui
             });
         }
 
+        protected override void OnInitialized(EventArgs e)
+        {
+            base.OnInitialized(e);
+            _tickInitialised = Environment.TickCount;
+        }
+
         private void NewSessionTab_Click(object sender, EventArgs e)
         {
             CreateSession(_defaultProfile);
@@ -76,8 +93,6 @@ namespace tterm.Ui
         protected override void OnSourceInitialized(EventArgs e)
         {
             base.OnSourceInitialized(e);
-            HwndSource.FromHwnd(Hwnd).AddHook(WindowProc);
-
             StartConsole();
         }
 
@@ -263,93 +278,24 @@ namespace tterm.Ui
             Height = fixedSize.Height;
         }
 
-        private IntPtr WindowProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-        {
-            switch (msg)
-            {
-                case WM_SIZE:
-                    {
-                        int type = wParam.ToInt32();
-                        var windowState = WindowState.Minimized;
-                        if ((type == SIZE_MAXIMIZED && WindowState != windowState) ||
-                            (type == SIZE_RESTORED && WindowState == WindowState.Maximized))
-                        {
-                            uint widthHeight = (uint)lParam.ToInt32();
-                            var bounds = new RECT()
-                            {
-                                right = (int)(widthHeight & 0xFFFF),
-                                bottom = (int)(widthHeight >> 16),
-                            };
-
-                            ForceWindowRect(bounds);
-
-                            resizeHint.IsShowing = true;
-                            resizeHint.IsShowing = false;
-                        }
-                        break;
-                    }
-                case WM_EXITSIZEMOVE:
-                    resizeHint.IsShowing = false;
-                    break;
-                case WM_SIZING:
-                    {
-                        resizeHint.IsShowing = true;
-
-                        var bounds = Marshal.PtrToStructure<RECT>(lParam);
-                        bounds = SnapWindowRect(bounds, wParam.ToInt32());
-                        Marshal.StructureToPtr(bounds, lParam, fDeleteOld: false);
-                        break;
-                    }
-            }
-            return IntPtr.Zero;
-        }
-
-        private void ForceWindowRect(RECT bounds)
-        {
-            var dpi = Dpi;
-            var absoluteSize = new Size(bounds.right - bounds.left, bounds.bottom - bounds.top);
-            var scaledSize = new Size(absoluteSize.Width / dpi.DpiScaleX, absoluteSize.Height / dpi.DpiScaleY);
-            GetWindowSizeSnap(scaledSize);
-        }
-
-        private RECT SnapWindowRect(RECT bounds, int grabDirection)
-        {
-            var dpi = Dpi;
-            var absoluteSize = new Size(bounds.right - bounds.left, bounds.bottom - bounds.top);
-            var scaledSize = new Size(absoluteSize.Width / dpi.DpiScaleX, absoluteSize.Height / dpi.DpiScaleY);
-            scaledSize = GetWindowSizeSnap(scaledSize);
-            absoluteSize = new Size(scaledSize.Width * dpi.DpiScaleX, scaledSize.Height * dpi.DpiScaleY);
-
-            switch (grabDirection) {
-            case WMSZ_LEFT:
-            case WMSZ_TOPLEFT:
-            case WMSZ_BOTTOMLEFT:
-                bounds.left = bounds.right - (int)absoluteSize.Width;
-                break;
-            case WMSZ_RIGHT:
-            case WMSZ_TOPRIGHT:
-            case WMSZ_BOTTOMRIGHT:
-                bounds.right = bounds.left + (int)absoluteSize.Width;
-                break;
-            }
-
-            switch (grabDirection) {
-            case WMSZ_TOP:
-            case WMSZ_TOPLEFT:
-            case WMSZ_TOPRIGHT:
-                bounds.top = bounds.bottom - (int)absoluteSize.Height;
-                break;
-            case WMSZ_BOTTOM:
-            case WMSZ_BOTTOMLEFT:
-            case WMSZ_BOTTOMRIGHT:
-                bounds.bottom = bounds.top + (int)absoluteSize.Height;
-                break;
-            }
-
-            return bounds;
-        }
-
         private Size GetWindowSizeSnap(Size size)
+        {
+            var tsize = GetBufferSizeForWindowSize(size);
+            _terminalSize = tsize;
+            if (_currentSession != null)
+            {
+                _currentSession.Size = tsize;
+            }
+            resizeHint.Hint = tsize;
+
+            _configService.Config.Columns = tsize.Columns;
+            _configService.Config.Rows = tsize.Rows;
+            _configService.Save();
+
+            return GetWindowSizeForBufferSize(tsize);
+        }
+
+        private TerminalSize GetBufferSizeForWindowSize(Size size)
         {
             Size charSize = GetBufferCharSize();
             Size consoleOffset = new Size(Math.Max(Width - txtConsole.ActualWidth, 0),
@@ -363,19 +309,7 @@ namespace tterm.Ui
             columns = Math.Max(columns, MinColumns);
             rows = Math.Max(rows, MinRows);
 
-            var tsize = new TerminalSize(columns, rows);
-            _terminalSize = tsize;
-            if (_currentSession != null)
-            {
-                _currentSession.Size = tsize;
-            }
-            resizeHint.Hint = tsize;
-
-            _configService.Config.Columns = tsize.Columns;
-            _configService.Config.Rows = tsize.Rows;
-            _configService.Save();
-
-            return GetWindowSizeForBufferSize(tsize);
+            return new TerminalSize(columns, rows);
         }
 
         private Size GetWindowSizeForBufferSize(TerminalSize size)
@@ -416,6 +350,42 @@ namespace tterm.Ui
             Debug.Assert(result.Width > 0);
             Debug.Assert(result.Height > 0);
             return result;
+        }
+
+        protected override Size GetPreferedSize(Size size)
+        {
+            return GetWindowSizeSnap(size);
+        }
+
+        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+        {
+            base.OnRenderSizeChanged(sizeInfo);
+
+            // Reize the current session buffer
+            var tsize = GetBufferSizeForWindowSize(sizeInfo.NewSize);
+            _terminalSize = tsize;
+            if (_currentSession != null)
+            {
+                _currentSession.Size = tsize;
+            }
+
+            if (Ready)
+            {
+                // Save configuration
+                _configService.Config.Columns = tsize.Columns;
+                _configService.Config.Rows = tsize.Rows;
+                _configService.Save();
+
+                // Update hint overlay
+                resizeHint.Hint = tsize;
+                resizeHint.IsShowing = true;
+                resizeHint.IsShowing = IsResizing;
+            }
+        }
+
+        protected override void OnResizeEnded()
+        {
+            resizeHint.IsShowing = false;
         }
     }
 }

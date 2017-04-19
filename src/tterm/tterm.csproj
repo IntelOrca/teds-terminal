@@ -113,6 +113,7 @@
     <Compile Include="Terminal\TerminalSessionManager.cs" />
     <Compile Include="Terminal\TerminalSize.cs" />
     <Compile Include="Terminal\TerminalTag.cs" />
+    <Compile Include="Ui\EnhancedWindow.cs" />
     <Compile Include="Ui\Models\TabDataItem.cs" />
     <Compile Include="Ui\ResizeHint.xaml.cs">
       <DependentUpon>ResizeHint.xaml</DependentUpon>
