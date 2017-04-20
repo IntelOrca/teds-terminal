@@ -133,6 +133,12 @@ namespace tterm.Terminal
         {
             switch (code.Type)
             {
+                case TerminalCodeType.ResetMode:
+                    Buffer.ShowCursor = false;
+                    break;
+                case TerminalCodeType.SetMode:
+                    Buffer.ShowCursor = true;
+                    break;
                 case TerminalCodeType.Text:
                     Buffer.Type(code.Text);
                     break;

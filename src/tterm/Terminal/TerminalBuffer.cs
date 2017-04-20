@@ -11,6 +11,7 @@ namespace tterm.Terminal
         private CharAttributes[] _bufferAttributes;
         private TerminalSize _size;
 
+        public bool ShowCursor { get; set; }
         public int CursorX { get; set; }
         public int CursorY { get; set; }
         public CharAttributes CurrentCharAttributes { get; set; }
@@ -206,7 +207,7 @@ namespace tterm.Terminal
         private CharAttributes GetAttributesAt(int x, int y, int index)
         {
             CharAttributes attr = _bufferAttributes[index];
-            if (x == CursorX && y == CursorY)
+            if (ShowCursor && x == CursorX && y == CursorY)
             {
                 attr.BackgroundColour = 15;
             }
