@@ -41,11 +41,13 @@ namespace tterm.Ui
                     if (_session != null)
                     {
                         _session.OutputReceived -= OnOutputReceived;
+                        _session.BufferSizeChanged -= OnBufferSizeChanged;
                     }
                     _session = value;
                     if (value != null)
                     {
                         _session.OutputReceived += OnOutputReceived;
+                        _session.BufferSizeChanged += OnBufferSizeChanged;
                     }
                     UpdateContent();
                 }
@@ -125,6 +127,7 @@ namespace tterm.Ui
             Focusable = true;
             FocusVisualStyle = null;
             SnapsToDevicePixels = true;
+            ClipToBounds = true;
         }
 
         #region Layout
@@ -141,7 +144,7 @@ namespace tterm.Ui
             return line;
         }
 
-        private void EnsureLineCount(int lineCount)
+        private void SetLineCount(int lineCount)
         {
             if (_lines.Count < lineCount)
             {
@@ -152,6 +155,13 @@ namespace tterm.Ui
                     Children.Add(textBlock);
                 }
                 AlignTextBlocks();
+            }
+            else if (_lines.Count > lineCount)
+            {
+                int removeIndex = lineCount;
+                int removeCount = _lines.Count - lineCount;
+                _lines.RemoveRange(removeIndex, removeCount);
+                Children.RemoveRange(removeIndex, removeCount);
             }
         }
 
@@ -221,7 +231,7 @@ namespace tterm.Ui
             if (IsSessionAvailable)
             {
                 int lineCount = Buffer.Size.Rows;
-                EnsureLineCount(lineCount);
+                SetLineCount(lineCount);
                 for (int y = 0; y < lineCount; y++)
                 {
                     UpdateLine(y);
@@ -437,6 +447,15 @@ namespace tterm.Ui
         private void OnOutputReceived(object sender, EventArgs e)
         {
             Dispatcher.Invoke(UpdateContent);
+        }
+
+        private void OnBufferSizeChanged(object sender, EventArgs e)
+        {
+            var session = Session;
+            if (session != null)
+            {
+                SetLineCount(session.Size.Rows);
+            }
         }
 
         #endregion

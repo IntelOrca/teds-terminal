@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace tterm.Terminal
 {
@@ -10,7 +11,7 @@ namespace tterm.Terminal
         private readonly ImmutableArray<TerminalTag> _tags;
         private readonly int _hash;
 
-        public int Length => _tags.Length;
+        public int Length => _tags.IsDefaultOrEmpty ? 0 : _tags.Length;
 
         public TerminalTagArray(ImmutableArray<TerminalTag> tags)
         {
@@ -74,12 +75,16 @@ namespace tterm.Terminal
 
         public IEnumerator<TerminalTag> GetEnumerator()
         {
+            if (_tags.IsDefaultOrEmpty)
+            {
+                return Enumerable.Empty<TerminalTag>().GetEnumerator();
+            }
             return ((IEnumerable<TerminalTag>)_tags).GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return ((IEnumerable<TerminalTag>)_tags).GetEnumerator();
+            return GetEnumerator();
         }
 
         public static bool operator ==(TerminalTagArray a, TerminalTagArray b)

@@ -32,6 +32,7 @@ namespace tterm.Terminal
 
         public event EventHandler TitleChanged;
         public event EventHandler OutputReceived;
+        public event EventHandler BufferSizeChanged;
         public event EventHandler Finished;
 
         public string Title { get; set; }
@@ -47,8 +48,12 @@ namespace tterm.Terminal
             get => Buffer.Size;
             set
             {
-                _pty.Size = value;
-                Buffer.Size = value;
+                if (Buffer.Size != value)
+                {
+                    _pty.Size = value;
+                    Buffer.Size = value;
+                    BufferSizeChanged?.Invoke(this, EventArgs.Empty);
+                }
             }
         }
 

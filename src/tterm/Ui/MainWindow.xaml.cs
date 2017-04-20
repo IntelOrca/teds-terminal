@@ -23,6 +23,7 @@ namespace tterm.Ui
 
         private int _tickInitialised;
         private bool _ready;
+        private Size _consoleSizeDelta;
 
         private ConfigurationService _configService = new ConfigurationService();
         private readonly ObservableCollection<TabDataItem> _leftTabs = new ObservableCollection<TabDataItem>();
@@ -273,13 +274,11 @@ namespace tterm.Ui
         private TerminalSize GetBufferSizeForWindowSize(Size size)
         {
             Size charSize = terminalControl.CharSize;
-            Size consoleOffset = new Size(Math.Max(Width - terminalControl.ActualWidth, 0),
-                                          Math.Max(Height - terminalControl.ActualHeight, 0));
-            Size newConsoleSize = new Size(Math.Max(size.Width - consoleOffset.Width, 0),
-                                           Math.Max(size.Height - consoleOffset.Height, 0));
+            Size newConsoleSize = new Size(Math.Max(size.Width - _consoleSizeDelta.Width, 0),
+                                           Math.Max(size.Height - _consoleSizeDelta.Height, 0));
 
-            int columns = (int)Math.Round(newConsoleSize.Width / charSize.Width);
-            int rows = (int)Math.Round(newConsoleSize.Height / charSize.Height);
+            int columns = (int)Math.Floor(newConsoleSize.Width / charSize.Width);
+            int rows = (int)Math.Floor(newConsoleSize.Height / charSize.Height);
 
             columns = Math.Max(columns, MinColumns);
             rows = Math.Max(rows, MinRows);
@@ -290,13 +289,11 @@ namespace tterm.Ui
         private Size GetWindowSizeForBufferSize(TerminalSize size)
         {
             Size charSize = terminalControl.CharSize;
-            Size consoleOffset = new Size(Math.Max(Width - terminalControl.ActualWidth, 0),
-                                          Math.Max(Height - terminalControl.ActualHeight, 0));
             Size snappedConsoleSize = new Size(size.Columns * charSize.Width,
                                                size.Rows * charSize.Height);
 
-            Size result = new Size(Math.Ceiling(snappedConsoleSize.Width + consoleOffset.Width) + 2,
-                                   Math.Ceiling(snappedConsoleSize.Height + consoleOffset.Height));
+            Size result = new Size(Math.Ceiling(snappedConsoleSize.Width + _consoleSizeDelta.Width) + 2,
+                                   Math.Ceiling(snappedConsoleSize.Height + _consoleSizeDelta.Height));
             return result;
         }
 
@@ -304,6 +301,14 @@ namespace tterm.Ui
         {
             var tsize = GetBufferSizeForWindowSize(size);
             return GetWindowSizeForBufferSize(tsize);
+        }
+
+        protected override Size ArrangeOverride(Size arrangeBounds)
+        {
+            Size result = base.ArrangeOverride(arrangeBounds);
+            _consoleSizeDelta = new Size(Math.Max(arrangeBounds.Width - terminalControl.ActualWidth, 0),
+                                         Math.Max(arrangeBounds.Height - terminalControl.ActualHeight, 0));
+            return result;
         }
 
         protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
