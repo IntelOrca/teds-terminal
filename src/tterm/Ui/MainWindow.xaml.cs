@@ -245,25 +245,42 @@ namespace tterm.Ui
                 {
                     var terminal = terminalControl;
                     const double FontSizeDelta = 2;
+                    double fontSize = terminal.FontSize;
                     if (e.Delta > 0)
                     {
-                        if (terminal.FontSize < 54)
+                        if (fontSize < 54)
                         {
-                            terminal.FontSize += FontSizeDelta;
-                            FixWindowSize();
+                            fontSize += FontSizeDelta;
                         }
                     }
                     else
                     {
-                        if (terminal.FontSize > 8)
+                        if (fontSize > 8)
                         {
-                            terminal.FontSize -= FontSizeDelta;
+                            fontSize -= FontSizeDelta;
+                        }
+                    }
+                    if (terminal.FontSize != fontSize)
+                    {
+                        terminal.FontSize = fontSize;
+                        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))
+                        {
                             FixWindowSize();
+                        }
+                        else
+                        {
+                            FixTerminalSize();
                         }
                     }
                     e.Handled = true;
                 }
             }
+        }
+
+        private void FixTerminalSize()
+        {
+            var size = GetBufferSizeForWindowSize(Size);
+            SetTermialSize(size);
         }
 
         private void FixWindowSize()
@@ -314,35 +331,37 @@ namespace tterm.Ui
         protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
         {
             base.OnRenderSizeChanged(sizeInfo);
-
-            // Reize the current session buffer
-            var tsize = GetBufferSizeForWindowSize(sizeInfo.NewSize);
-            if (tsize != _terminalSize)
-            {
-                _terminalSize = tsize;
-                if (_currentSession != null)
-                {
-                    _currentSession.Size = tsize;
-                }
-
-                if (Ready)
-                {
-                    // Save configuration
-                    _configService.Config.Columns = tsize.Columns;
-                    _configService.Config.Rows = tsize.Rows;
-                    _configService.Save();
-
-                    // Update hint overlay
-                    resizeHint.Hint = tsize;
-                    resizeHint.IsShowing = true;
-                    resizeHint.IsShowing = IsResizing;
-                }
-            }
+            FixTerminalSize();
         }
 
         protected override void OnResizeEnded()
         {
             resizeHint.IsShowing = false;
+        }
+
+        private void SetTermialSize(TerminalSize size)
+        {
+            if (_terminalSize != size)
+            {
+                _terminalSize = size;
+                if (_currentSession != null)
+                {
+                    _currentSession.Size = size;
+                }
+
+                if (Ready)
+                {
+                    // Save configuration
+                    _configService.Config.Columns = size.Columns;
+                    _configService.Config.Rows = size.Rows;
+                    _configService.Save();
+
+                    // Update hint overlay
+                    resizeHint.Hint = size;
+                    resizeHint.IsShowing = true;
+                    resizeHint.IsShowing = IsResizing;
+                }
+            }
         }
     }
 }
