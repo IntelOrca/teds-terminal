@@ -451,11 +451,7 @@ namespace tterm.Ui
 
         private void OnBufferSizeChanged(object sender, EventArgs e)
         {
-            var session = Session;
-            if (session != null)
-            {
-                SetLineCount(session.Size.Rows);
-            }
+            Dispatcher.Invoke(UpdateContent);
         }
 
         #endregion

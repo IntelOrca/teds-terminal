@@ -38,24 +38,29 @@ namespace tterm.Terminal
             {
                 if (value != _size)
                 {
-                    var newBuffer = new char[value.Rows * value.Columns];
-                    var newBufferAttributes = new CharAttributes[newBuffer.Length];
-                    for (int y = 0; y < value.Rows; y++)
-                    {
-                        for (int x = 0; x < value.Columns; x++)
-                        {
-                            if (IsInBuffer(x, y))
-                            {
-                                int srcIndex = GetBufferIndex(x, y);
-                                int dstIndex = x + (y * value.Columns);
-                                newBuffer[dstIndex] = _buffer[srcIndex];
-                                newBufferAttributes[dstIndex] = _bufferAttributes[srcIndex];
-                            }
-                        }
-                    }
-                    _buffer = newBuffer;
-                    _bufferAttributes = newBufferAttributes;
-                    _size = value;
+                    var srcSize = _size;
+                    var dstSize = value;
+
+                    var srcBuffer = _buffer;
+                    var srcBufferAttributes = _bufferAttributes;
+                    var dstBuffer = new char[dstSize.Rows * dstSize.Columns];
+                    var dstBufferAttributes = new CharAttributes[dstBuffer.Length];
+
+                    int srcLeft = 0;
+                    int srcRight = Math.Min(srcSize.Columns, dstSize.Columns) - 1;
+                    int srcTop = Math.Max(0, CursorY - dstSize.Rows + 1);
+                    int srcBottom = srcTop + Math.Min(srcSize.Rows, dstSize.Rows) - 1;
+                    int dstLeft = 0;
+                    int dstTop = 0;
+
+                    CopyBufferToBuffer(srcBuffer, srcBufferAttributes, srcSize, srcLeft, srcTop, srcRight, srcBottom,
+                                       dstBuffer, dstBufferAttributes, dstSize, dstLeft, dstTop);
+
+                    _buffer = dstBuffer;
+                    _bufferAttributes = dstBufferAttributes;
+                    _size = dstSize;
+
+                    CursorY = Math.Min(CursorY, _size.Rows - 1);
                 }
             }
         }
@@ -67,6 +72,11 @@ namespace tterm.Terminal
 
         public void ClearBlock(int left, int top, int right, int bottom)
         {
+            left = Math.Max(0, left);
+            top = Math.Max(0, top);
+            right = Math.Min(right, _size.Columns - 1);
+            bottom = Math.Min(bottom, _size.Rows - 1);
+
             for (int y = top; y <= bottom; y++)
             {
                 for (int x = left; x <= right; x++)
@@ -250,6 +260,27 @@ namespace tterm.Terminal
         private TerminalPoint GetBufferPoint(int index)
         {
             return new TerminalPoint(index % _size.Columns, index % _size.Columns);
+        }
+
+        private static void CopyBufferToBuffer(char[] srcBuffer, CharAttributes[] srcBufferAttributes, TerminalSize srcSize, int srcLeft, int srcTop, int srcRight, int srcBottom,
+                                               char[] dstBuffer, CharAttributes[] dstBufferAttributes, TerminalSize dstSize, int dstLeft, int dstTop)
+        {
+            int cols = srcRight - srcLeft + 1;
+            int rows = srcBottom - srcTop + 1;
+            for (int y = 0; y < rows; y++)
+            {
+                for (int x = 0; x < cols; x++)
+                {
+                    int srcX = srcLeft + x;
+                    int srcY = srcTop + y;
+                    int dstX = dstLeft + x;
+                    int dstY = dstTop + y;
+                    int srcIndex = srcX + (srcY * srcSize.Columns);
+                    int dstIndex = dstX + (dstY * dstSize.Columns);
+                    dstBuffer[dstIndex] = srcBuffer[srcIndex];
+                    dstBufferAttributes[dstIndex] = srcBufferAttributes[srcIndex];
+                }
+            }
         }
     }
 }
