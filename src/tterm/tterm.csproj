@@ -109,6 +109,8 @@
     <Compile Include="Extensions\EnumerableExtensions.cs" />
     <Compile Include="Profile.cs" />
     <Compile Include="Terminal\SelectionMode.cs" />
+    <Compile Include="Terminal\TerminalBufferChar.cs" />
+    <Compile Include="Terminal\TerminalBufferLine.cs" />
     <Compile Include="Terminal\TerminalPoint.cs" />
     <Compile Include="Terminal\TerminalSelection.cs" />
     <Compile Include="Terminal\TerminalSession.cs" />

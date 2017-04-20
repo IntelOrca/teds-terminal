@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Windows;
 using tterm.Ansi;
@@ -7,9 +8,11 @@ namespace tterm.Terminal
 {
     internal class TerminalBuffer
     {
-        private char[] _buffer;
-        private CharAttributes[] _bufferAttributes;
+        private const int MaxHistorySize = 1024;
+
+        private TerminalBufferChar[] _buffer;
         private TerminalSize _size;
+        private readonly List<TerminalBufferLine> _history = new List<TerminalBufferLine>();
 
         public bool ShowCursor { get; set; }
         public int CursorX { get; set; }
@@ -24,8 +27,7 @@ namespace tterm.Terminal
 
         private void Initialise(TerminalSize size)
         {
-            _buffer = new char[size.Rows * size.Columns];
-            _bufferAttributes = new CharAttributes[_buffer.Length];
+            _buffer = new TerminalBufferChar[size.Rows * size.Columns];
             _size = size;
             CursorX = 0;
             CursorY = 0;
@@ -43,9 +45,7 @@ namespace tterm.Terminal
                     var dstSize = value;
 
                     var srcBuffer = _buffer;
-                    var srcBufferAttributes = _bufferAttributes;
-                    var dstBuffer = new char[dstSize.Rows * dstSize.Columns];
-                    var dstBufferAttributes = new CharAttributes[dstBuffer.Length];
+                    var dstBuffer = new TerminalBufferChar[dstSize.Rows * dstSize.Columns];
 
                     int srcLeft = 0;
                     int srcRight = Math.Min(srcSize.Columns, dstSize.Columns) - 1;
@@ -54,11 +54,10 @@ namespace tterm.Terminal
                     int dstLeft = 0;
                     int dstTop = 0;
 
-                    CopyBufferToBuffer(srcBuffer, srcBufferAttributes, srcSize, srcLeft, srcTop, srcRight, srcBottom,
-                                       dstBuffer, dstBufferAttributes, dstSize, dstLeft, dstTop);
+                    CopyBufferToBuffer(srcBuffer, srcSize, srcLeft, srcTop, srcRight, srcBottom,
+                                       dstBuffer, dstSize, dstLeft, dstTop);
 
                     _buffer = dstBuffer;
-                    _bufferAttributes = dstBufferAttributes;
                     _size = dstSize;
 
                     CursorY = Math.Min(CursorY, _size.Rows - 1);
@@ -83,8 +82,7 @@ namespace tterm.Terminal
                 for (int x = left; x <= right; x++)
                 {
                     int index = GetBufferIndex(x, y);
-                    _buffer[index] = ' ';
-                    _bufferAttributes[index] = default(CharAttributes);
+                    _buffer[index] = new TerminalBufferChar(' ', default(CharAttributes));
                 }
             }
         }
@@ -93,7 +91,8 @@ namespace tterm.Terminal
         {
             if (IsInBuffer(CursorX, CursorY))
             {
-                _buffer[GetBufferIndex(CursorX, CursorY)] = c;
+                int index = GetBufferIndex(CursorX, CursorY);
+                _buffer[index] = new TerminalBufferChar(c, CurrentCharAttributes);
                 CursorX++;
             }
         }
@@ -105,8 +104,7 @@ namespace tterm.Terminal
                 if (IsInBuffer(CursorX, CursorY))
                 {
                     int index = GetBufferIndex(CursorX, CursorY);
-                    _buffer[index] = c;
-                    _bufferAttributes[index] = CurrentCharAttributes;
+                    _buffer[index] = new TerminalBufferChar(c, CurrentCharAttributes);
                     CursorX++;
                 }
             }
@@ -114,39 +112,18 @@ namespace tterm.Terminal
 
         public void ShiftUp()
         {
+            var topLine = GetBufferLine(0);
+            AddHistory(topLine);
+
             for (int y = 0; y < _size.Rows - 1; y++)
             {
                 Array.Copy(_buffer, (y + 1) * _size.Columns, _buffer, y * _size.Columns, _size.Columns);
-                Array.Copy(_bufferAttributes, (y + 1) * _size.Columns, _bufferAttributes, y * _size.Columns, _size.Columns);
             }
         }
 
         public string GetText(int y)
         {
-            string line = new string(_buffer, GetBufferIndex(0, y), _size.Columns);
-            return line;
-        }
-
-        public string GetText(int x, int y, int length)
-        {
-            if (x + length > _size.Columns)
-            {
-                throw new ArgumentException("Range overflows line length.", nameof(length));
-            }
-
-            int startIndex = GetBufferIndex(x, y);
-            string line = new string(_buffer, startIndex, length);
-            return line;
-        }
-
-        public string[] GetSelectionText()
-        {
-            var selection = Selection;
-            int left = Math.Min(selection.Start.Column, selection.End.Column);
-            int right = Math.Max(selection.Start.Column, selection.End.Column);
-            int top = Math.Min(selection.Start.Row, selection.End.Row);
-            int bottom = Math.Max(selection.Start.Row, selection.End.Row);
-            return GetText(left, top, right, bottom);
+            return GetText(0, y, _size.Columns);
         }
 
         public string[] GetText(int left, int top, int right, int bottom)
@@ -161,6 +138,39 @@ namespace tterm.Terminal
             return result;
         }
 
+        public string GetText(int x, int y, int length)
+        {
+            if (x + length > _size.Columns)
+            {
+                throw new ArgumentException("Range overflows line length.", nameof(length));
+            }
+
+            int index = GetBufferIndex(x, y);
+            string line = GetTextAtIndex(index, length);
+            return line;
+        }
+
+        public string GetTextAtIndex(int index, int length)
+        {
+            var chars = new char[length];
+            for (int i = 0; i < length; i++)
+            {
+                chars[i] = _buffer[index + i].Char;
+            }
+            string line = new string(chars);
+            return line;
+        }
+
+        public string[] GetSelectionText()
+        {
+            var selection = Selection;
+            int left = Math.Min(selection.Start.Column, selection.End.Column);
+            int right = Math.Max(selection.Start.Column, selection.End.Column);
+            int top = Math.Min(selection.Start.Row, selection.End.Row);
+            int bottom = Math.Max(selection.Start.Row, selection.End.Row);
+            return GetText(left, top, right, bottom);
+        }
+
         public void CopySelection()
         {
             string[] selectionText = GetSelectionText();
@@ -171,10 +181,16 @@ namespace tterm.Terminal
             Clipboard.SetDataObject(dataObject, copy: true);
         }
 
+        public TerminalBufferLine GetBufferLine(int y)
+        {
+            int startIndex = GetBufferIndex(0, y);
+            var bufferLine = new TerminalBufferLine(_buffer, startIndex, _size.Columns);
+            return bufferLine;
+        }
+
         public TerminalTagArray GetFormattedLine(int y)
         {
             var buffer = _buffer;
-            var bufferAttributes = _bufferAttributes;
             int startIndex = GetBufferIndex(0, y);
             int endIndex = startIndex + _size.Columns;
 
@@ -185,10 +201,12 @@ namespace tterm.Terminal
             var currentTagAttribute = GetAttributesAt(0, y, startIndex);
             for (int i = startIndex + 1; i < endIndex; i++)
             {
-                var attr = GetAttributesAt(i - startIndex, y, i);
-                if (!CanContinueTag(currentTagAttribute, attr, buffer[i]))
+                int x = i - startIndex;
+                char c = buffer[i].Char;
+                var attr = GetAttributesAt(x, y, i);
+                if (!CanContinueTag(currentTagAttribute, attr, c))
                 {
-                    string tagText = new string(buffer, currentTagStartIndex, i - currentTagStartIndex);
+                    string tagText = GetTextAtIndex(currentTagStartIndex, i - currentTagStartIndex);
                     tags.Add(new TerminalTag(tagText, currentTagAttribute));
 
                     currentTagStartIndex = i;
@@ -198,7 +216,7 @@ namespace tterm.Terminal
 
             // Last tag
             {
-                string tagText = new string(buffer, currentTagStartIndex, endIndex - currentTagStartIndex);
+                string tagText = GetTextAtIndex(currentTagStartIndex, endIndex - currentTagStartIndex);
                 tags.Add(new TerminalTag(tagText, currentTagAttribute));
             }
             return new TerminalTagArray(tags.ToImmutable());
@@ -206,7 +224,7 @@ namespace tterm.Terminal
 
         private CharAttributes GetAttributesAt(int x, int y, int index)
         {
-            CharAttributes attr = _bufferAttributes[index];
+            CharAttributes attr = _buffer[index].Attributes;
             if (ShowCursor && x == CursorX && y == CursorY)
             {
                 attr.BackgroundColour = 15;
@@ -263,8 +281,17 @@ namespace tterm.Terminal
             return new TerminalPoint(index % _size.Columns, index % _size.Columns);
         }
 
-        private static void CopyBufferToBuffer(char[] srcBuffer, CharAttributes[] srcBufferAttributes, TerminalSize srcSize, int srcLeft, int srcTop, int srcRight, int srcBottom,
-                                               char[] dstBuffer, CharAttributes[] dstBufferAttributes, TerminalSize dstSize, int dstLeft, int dstTop)
+        private void AddHistory(TerminalBufferLine line)
+        {
+            if (_history.Count >= MaxHistorySize)
+            {
+                _history.RemoveAt(0);
+            }
+            _history.Add(line);
+        }
+
+        private static void CopyBufferToBuffer(TerminalBufferChar[] srcBuffer, TerminalSize srcSize, int srcLeft, int srcTop, int srcRight, int srcBottom,
+                                               TerminalBufferChar[] dstBuffer, TerminalSize dstSize, int dstLeft, int dstTop)
         {
             int cols = srcRight - srcLeft + 1;
             int rows = srcBottom - srcTop + 1;
@@ -279,7 +306,6 @@ namespace tterm.Terminal
                     int srcIndex = srcX + (srcY * srcSize.Columns);
                     int dstIndex = dstX + (dstY * dstSize.Columns);
                     dstBuffer[dstIndex] = srcBuffer[srcIndex];
-                    dstBufferAttributes[dstIndex] = srcBufferAttributes[srcIndex];
                 }
             }
         }
