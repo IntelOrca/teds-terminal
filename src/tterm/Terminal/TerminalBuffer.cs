@@ -297,16 +297,11 @@ namespace tterm.Terminal
             int rows = srcBottom - srcTop + 1;
             for (int y = 0; y < rows; y++)
             {
-                for (int x = 0; x < cols; x++)
-                {
-                    int srcX = srcLeft + x;
-                    int srcY = srcTop + y;
-                    int dstX = dstLeft + x;
-                    int dstY = dstTop + y;
-                    int srcIndex = srcX + (srcY * srcSize.Columns);
-                    int dstIndex = dstX + (dstY * dstSize.Columns);
-                    dstBuffer[dstIndex] = srcBuffer[srcIndex];
-                }
+                int srcY = srcTop + y;
+                int dstY = dstTop + y;
+                int srcIndex = srcLeft + (srcY * srcSize.Columns);
+                int dstIndex = dstLeft + (dstY * dstSize.Columns);
+                Array.Copy(srcBuffer, srcIndex, dstBuffer, dstIndex, cols);
             }
         }
     }
