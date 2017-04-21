@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace tterm
 {
@@ -12,5 +13,8 @@ namespace tterm
 
         [JsonProperty(PropertyName = "cwd")]
         public string CurrentWorkingDirectory { get; set; }
+
+        [JsonProperty(PropertyName = "env")]
+        public IDictionary<string, string> EnvironmentVariables { get; set; }
     }
 }

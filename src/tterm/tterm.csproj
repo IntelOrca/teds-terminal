@@ -105,7 +105,9 @@
     <Compile Include="Config.cs" />
     <Compile Include="ConfigurationService.cs" />
     <Compile Include="DefaultProfile.cs" />
+    <Compile Include="EnvironmentVariableHelper.cs" />
     <Compile Include="EnvironmentVariables.cs" />
+    <Compile Include="Extensions\DictionaryExtensions.cs" />
     <Compile Include="Extensions\EnumerableExtensions.cs" />
     <Compile Include="Profile.cs" />
     <Compile Include="Terminal\SelectionMode.cs" />
@@ -128,6 +130,7 @@
     <Compile Include="Ui\TerminalColourHelper.cs" />
     <Compile Include="Ui\TerminalControl.cs" />
     <Compile Include="Ui\TerminalControlLine.cs" />
+    <Compile Include="UserUtility.cs" />
     <Compile Include="Utility\ArrayReader.cs" />
     <Compile Include="Extensions\ArraySegmentExtensions.cs" />
     <Compile Include="Native\Win32.cs" />

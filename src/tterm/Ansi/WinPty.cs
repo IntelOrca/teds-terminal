@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
@@ -55,11 +56,13 @@ namespace tterm.Ansi
                 }
 
                 string cmdline = null;
+                string env = null;
                 if (profile.Arguments != null && profile.Arguments.Length > 0)
                 {
                     cmdline = string.Join(" ", profile.Arguments.Select(x => $"\"{x}\""));
+                    env = GetEnvironmentString(profile.EnvironmentVariables);
                 }
-                spawnCfg = winpty_spawn_config_new(WINPTY_SPAWN_FLAG_AUTO_SHUTDOWN, profile.Command, cmdline, profile.CurrentWorkingDirectory, null, out err);
+                spawnCfg = winpty_spawn_config_new(WINPTY_SPAWN_FLAG_AUTO_SHUTDOWN, profile.Command, cmdline, profile.CurrentWorkingDirectory, env, out err);
                 if (err != IntPtr.Zero)
                 {
                     throw new WinPtrException(err);
@@ -131,6 +134,22 @@ namespace tterm.Ansi
             var pipe = new NamedPipeClientStream(serverName, pipeName, direction);
             pipe.Connect();
             return pipe;
+        }
+
+        private string GetEnvironmentString(IDictionary<string, string> environmentVariables)
+        {
+            if (environmentVariables == null)
+            {
+                return null;
+            }
+
+            var sb = new StringBuilder();
+            foreach (var kvp in environmentVariables)
+            {
+                sb.AppendFormat("{0}={1}\0", kvp.Key, kvp.Value);
+            }
+            sb.Append('\0');
+            return sb.ToString();
         }
 
         public TerminalSize Size

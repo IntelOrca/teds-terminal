@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using MahApps.Metro.IconPacks;
@@ -184,40 +183,22 @@ namespace tterm.Ui
 
         private static Profile ExpandVariables(Profile profile)
         {
+            var envHelper = new EnvironmentVariableHelper();
+            var env = envHelper.GetUser();
+
+            var profileEnv = profile.EnvironmentVariables;
+            if (profileEnv != null)
+            {
+                envHelper.ExpandVariables(env, profileEnv);
+            }
+
             return new Profile()
             {
-                Command = ExpandVariables(profile.Command),
-                CurrentWorkingDirectory = ExpandVariables(profile.CurrentWorkingDirectory),
-                Arguments = profile.Arguments?.Select(x => ExpandVariables(x)).ToArray()
+                Command = envHelper.ExpandVariables(profile.Command, env),
+                CurrentWorkingDirectory = envHelper.ExpandVariables(profile.CurrentWorkingDirectory, env),
+                Arguments = profile.Arguments?.Select(x => envHelper.ExpandVariables(x, env)).ToArray(),
+                EnvironmentVariables = env
             };
-        }
-
-        private static string ExpandVariables(string s)
-        {
-            var sb = new StringBuilder();
-            int index = 0;
-            for (;;)
-            {
-                int start = s.IndexOf('%', index);
-                if (start != -1)
-                {
-                    int end = s.IndexOf('%', start + 1);
-                    if (end != -1)
-                    {
-                        string varName = s.Substring(start + 1, end - start - 1);
-                        string varValue = Environment.GetEnvironmentVariable(varName);
-
-                        sb.Append(s.Substring(index, start - index));
-                        sb.Append(varValue);
-
-                        index = end + 1;
-                        continue;
-                    }
-                }
-                sb.Append(s.Substring(index));
-                break;
-            }
-            return sb.ToString();
         }
 
         private void terminalControl_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
