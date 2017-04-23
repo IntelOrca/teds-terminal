@@ -59,7 +59,7 @@ namespace tterm.Ui
             // dark:
             "#2e3436",
             "#cc0000",
-            "#4e9a06",
+            "#0dbc79",
             "#c4a000",
             "#3465a4",
             "#75507b",
@@ -69,7 +69,7 @@ namespace tterm.Ui
             // bright:
             "#555753",
             "#ef2929",
-            "#8ae234",
+            "#23D18B",
             "#fce94f",
             "#729fcf",
             "#ad7fa8",
