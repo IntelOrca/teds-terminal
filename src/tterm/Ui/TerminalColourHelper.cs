@@ -39,7 +39,18 @@ namespace tterm.Ui
 
         public Color GetColour(int id)
         {
-            return (Color)ColorConverter.ConvertFromString(TangoColours[id % 16]);
+            switch (id)
+            {
+                case SpecialColourIds.Cursor:
+                    return Color.FromRgb(204, 204, 204);
+                case SpecialColourIds.Selection:
+                    return Color.FromRgb(203, 203, 203);
+                case SpecialColourIds.Historic:
+                case SpecialColourIds.Futuristic:
+                    return Color.FromRgb(24, 24, 24);
+                default:
+                    return (Color)ColorConverter.ConvertFromString(TangoColours[id % 16]);
+            }
         }
 
         // Colors 0-15

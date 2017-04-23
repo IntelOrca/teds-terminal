@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Windows;
 using tterm.Ansi;
+using tterm.Ui;
 
 namespace tterm.Terminal
 {
@@ -209,16 +210,18 @@ namespace tterm.Terminal
 
         public TerminalTagArray GetFormattedLine(int y)
         {
+            var tags = ImmutableArray.CreateBuilder<TerminalTag>(initialCapacity: _size.Columns);
+
             (var buffer, int startIndex, int endIndex) = GetLineBufferRange(y);
+            y += WindowTop;
             if (buffer == null)
             {
-                return default(TerminalTagArray);
+                AddFillerTags(tags, 0, y, _size.Columns);
+                return new TerminalTagArray(tags.ToImmutable());
             }
 
-            y += WindowTop;
-            var tags = ImmutableArray.CreateBuilder<TerminalTag>(initialCapacity: 8);
-
             // Group sequentially by attribute
+            int lineLength = endIndex - startIndex;
             var currentTagStartIndex = startIndex;
             var currentTagAttribute = GetAttributesAt(buffer[startIndex], 0, y);
             for (int i = startIndex + 1; i < endIndex; i++)
@@ -241,7 +244,38 @@ namespace tterm.Terminal
                 string tagText = GetTextAtIndex(buffer, currentTagStartIndex, endIndex - currentTagStartIndex);
                 tags.Add(new TerminalTag(tagText, currentTagAttribute));
             }
+
+            // Filler tags
+            if (lineLength < _size.Columns)
+            {
+                AddFillerTags(tags, lineLength, y, _size.Columns - lineLength);
+            }
+
             return new TerminalTagArray(tags.ToImmutable());
+        }
+
+        private void AddFillerTags(ImmutableArray<TerminalTag>.Builder builder, int x, int y, int length)
+        {
+            int tagLength = 0;
+            var lastAttr = GetAttributesAt(default(TerminalBufferChar), x, y);
+            for (int i = 0; i < length; i++)
+            {
+                tagLength++;
+                var attr = GetAttributesAt(default(TerminalBufferChar), x + i, y);
+                if (attr != lastAttr)
+                {
+                    string text = new string(' ', tagLength);
+                    builder.Add(new TerminalTag(text, lastAttr));
+                    lastAttr = attr;
+                    tagLength = 0;
+                }
+            }
+
+            // Last tag
+            {
+                string text = new string(' ', tagLength);
+                builder.Add(new TerminalTag(text, lastAttr));
+            }
         }
 
         private CharAttributes GetAttributesAt(TerminalBufferChar bufferChar, int x, int y)
@@ -249,11 +283,19 @@ namespace tterm.Terminal
             CharAttributes attr = bufferChar.Attributes;
             if (ShowCursor && x == CursorX && y == CursorY)
             {
-                attr.BackgroundColour = 15;
+                attr.BackgroundColour = SpecialColourIds.Cursor;
             }
             else if (IsPointInSelection(x, y))
             {
-                attr.BackgroundColour = 8;
+                attr.BackgroundColour = SpecialColourIds.Selection;
+            }
+            else if (y < 0)
+            {
+                attr.BackgroundColour = SpecialColourIds.Historic;
+            }
+            else if (y >= _size.Rows)
+            {
+                attr.BackgroundColour = SpecialColourIds.Futuristic;
             }
             return attr;
         }

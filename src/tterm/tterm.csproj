@@ -126,6 +126,7 @@
     <Compile Include="Ui\ResizeHint.xaml.cs">
       <DependentUpon>ResizeHint.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Ui\SpecialColourIds.cs" />
     <Compile Include="Ui\TabBar.xaml.cs">
       <DependentUpon>TabBar.xaml</DependentUpon>
     </Compile>
