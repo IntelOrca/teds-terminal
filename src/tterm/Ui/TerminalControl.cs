@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using tterm.Ansi;
 using tterm.Terminal;
 using SelectionMode = tterm.Terminal.SelectionMode;
@@ -16,6 +16,10 @@ namespace tterm.Ui
 {
     internal class TerminalControl : Canvas
     {
+        private const int UpdateTimerIntervalMs = 50;
+        private const int UpdateTimerTriggerMs = 50;
+        private const int UpdateTimerTriggerIntervalCount = 5;
+
         private readonly TerminalColourHelper _colourHelper = new TerminalColourHelper();
         private readonly List<TerminalControlLine> _lines = new List<TerminalControlLine>();
 
@@ -30,6 +34,14 @@ namespace tterm.Ui
         private Size? _charSize;
 
         private int _lastCursorY;
+
+        private readonly DispatcherTimer _updateTimer;
+        private readonly object _updateRequestIntervalsSync = new object();
+        private readonly int[] _updateRequestIntervals = new int[UpdateTimerTriggerIntervalCount];
+        private int _updateRequestIntervalsIndex;
+        private int _lastUpdateTick;
+        private int _updateAvailable;
+
 
         public TerminalSession Session
         {
@@ -128,6 +140,13 @@ namespace tterm.Ui
             FocusVisualStyle = null;
             SnapsToDevicePixels = true;
             ClipToBounds = true;
+
+            _updateTimer = new DispatcherTimer(
+                TimeSpan.FromMilliseconds(UpdateTimerIntervalMs),
+                DispatcherPriority.Background,
+                OnTimeControlledUpdate,
+                Dispatcher);
+            _updateTimer.Stop();
         }
 
         #region Layout
@@ -228,26 +247,83 @@ namespace tterm.Ui
 
         public void UpdateContent()
         {
-            if (IsSessionAvailable)
+            Interlocked.Increment(ref _updateAvailable);
+
+            // If we are getting a lot of update requests, off load it to our update timer for a more
+            // steady refresh rate that doesn't slow the UI down
+            bool heavyLoad = false;
+            lock (_updateRequestIntervalsSync)
             {
-                int lineCount = Buffer.Size.Rows;
-                SetLineCount(lineCount);
-                for (int y = 0; y < lineCount; y++)
+                int currentTick = Environment.TickCount;
+                int interval = currentTick - _lastUpdateTick;
+                int[] intervals = _updateRequestIntervals;
+                int measureLength = intervals.Length;
+                int intervalsIndex = _updateRequestIntervalsIndex;
+                intervals[intervalsIndex] = interval;
+                intervalsIndex++;
+                if (intervalsIndex == measureLength)
                 {
-                    UpdateLine(y);
+                    intervalsIndex = 0;
                 }
-                _lastCursorY = Buffer.CursorY;
+                _updateRequestIntervalsIndex = intervalsIndex;
+                _lastUpdateTick = currentTick;
+
+                int total = 0;
+                for (int i = 0; i < intervals.Length; i++)
+                {
+                    total += intervals[i];
+                }
+                heavyLoad = (total < UpdateTimerTriggerMs);
+            }
+
+            if (heavyLoad)
+            {
+                _updateTimer.IsEnabled = true;
             }
             else
             {
-                _lines.Clear();
-                Children.Clear();
+                _updateTimer.IsEnabled = false;
+                UpdateContentControlled();
             }
         }
 
-        private void UpdateLine(int y)
+        public void UpdateContentControlled()
         {
-            _lines[y].Tags = Buffer.GetFormattedLine(y);
+            int updateAvailable = Interlocked.Exchange(ref _updateAvailable, 0);
+            if (updateAvailable == 0)
+            {
+                return;
+            }
+
+            if (IsSessionAvailable)
+            {
+                int lineCount = Buffer.Size.Rows;
+                var lineTags = new TerminalTagArray[lineCount];
+                for (int y = 0; y < lineCount; y++)
+                {
+                    lineTags[y] = Buffer.GetFormattedLine(y);
+                }
+
+                Dispatcher.InvokeAsync(() =>
+                {
+                    _lastCursorY = Buffer.CursorY;
+                    SetLineCount(lineCount);
+                    for (int y = 0; y < lineCount; y++)
+                    {
+                        _lines[y].Tags = lineTags[y];
+                    }
+
+                    _lastUpdateTick = Environment.TickCount;
+                });
+            }
+            else
+            {
+                Dispatcher.InvokeAsync(() =>
+                {
+                    _lines.Clear();
+                    Children.Clear();
+                });
+            }
         }
 
         #endregion
@@ -446,12 +522,17 @@ namespace tterm.Ui
 
         private void OnOutputReceived(object sender, EventArgs e)
         {
-            Dispatcher.Invoke(UpdateContent);
+            UpdateContent();
         }
 
         private void OnBufferSizeChanged(object sender, EventArgs e)
         {
-            Dispatcher.Invoke(UpdateContent);
+            UpdateContent();
+        }
+
+        private void OnTimeControlledUpdate(object sender, EventArgs e)
+        {
+            UpdateContentControlled();
         }
 
         #endregion
