@@ -138,6 +138,13 @@ namespace tterm.Terminal
                     break;
                 case TerminalCodeType.SetMode:
                     Buffer.ShowCursor = true;
+
+                    // HACK We want clear to reset the window position but not general typing.
+                    //      We therefore reset the window only if the cursor is moved to the top.
+                    if (Buffer.CursorY == 0)
+                    {
+                        Buffer.WindowTop = 0;
+                    }
                     break;
                 case TerminalCodeType.Text:
                     Buffer.Type(code.Text);
