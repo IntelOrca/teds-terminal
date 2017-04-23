@@ -439,6 +439,14 @@ namespace tterm.Ui
             {
                 double delta = -e.Delta / 40.0;
                 int offset = (int)delta;
+                if (offset < 0 && Buffer.WindowTop > 0 && Buffer.WindowTop + offset < 0)
+                {
+                    offset = -Buffer.WindowTop;
+                }
+                else if (offset > 0 && Buffer.WindowTop < 0 && Buffer.WindowTop + offset > 0)
+                {
+                    offset = -Buffer.WindowTop;
+                }
                 Buffer.Scroll(offset);
                 UpdateContentForced();
                 e.Handled = true;
