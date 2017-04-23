@@ -295,7 +295,11 @@ namespace tterm.Ui
             {
                 return;
             }
+            UpdateContentForced();
+        }
 
+        public void UpdateContentForced()
+        {
             if (IsSessionAvailable)
             {
                 int lineCount = Buffer.Size.Rows;
@@ -336,13 +340,13 @@ namespace tterm.Ui
         private void ClearSelection()
         {
             Buffer.Selection = null;
-            UpdateContent();
+            UpdateContentForced();
         }
 
         private void StartSelectionAt(TerminalPoint startPoint)
         {
             Buffer.Selection = new TerminalSelection(SelectionMode.Block, startPoint, startPoint);
-            UpdateContent();
+            UpdateContentForced();
         }
 
         private void EndSelectionAt(TerminalPoint endPoint)
@@ -351,7 +355,7 @@ namespace tterm.Ui
             {
                 var startPoint = Buffer.Selection.Start;
                 Buffer.Selection = new TerminalSelection(SelectionMode.Block, startPoint, endPoint);
-                UpdateContent();
+                UpdateContentForced();
             }
         }
 
@@ -426,6 +430,30 @@ namespace tterm.Ui
                 {
                     EndSelectionAt(point.Value);
                 }
+            }
+        }
+
+        protected override void OnPreviewMouseWheel(MouseWheelEventArgs e)
+        {
+            if (Keyboard.Modifiers == ModifierKeys.None)
+            {
+                double delta = -e.Delta / 40.0;
+                int offset = (int)delta;
+                if (offset < 0 && Buffer.WindowTop > 0 && Buffer.WindowTop + offset < 0)
+                {
+                    offset = -Buffer.WindowTop;
+                }
+                else if (offset > 0 && Buffer.WindowTop < 0 && Buffer.WindowTop + offset > 0)
+                {
+                    offset = -Buffer.WindowTop;
+                }
+                Buffer.Scroll(offset);
+                UpdateContentForced();
+                e.Handled = true;
+            }
+            else
+            {
+                base.OnPreviewMouseWheel(e);
             }
         }
 

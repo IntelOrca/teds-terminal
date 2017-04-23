@@ -51,8 +51,12 @@ namespace tterm.Terminal
 
             var tagsA = _tags;
             var tagsB = other._tags;
-            if (!ReferenceEquals(tagsA, tagsB))
+            if (tagsA != tagsB)
             {
+                if (tagsA.IsDefaultOrEmpty || tagsB.IsDefaultOrEmpty)
+                {
+                    return false;
+                }
                 if (tagsA.Length != tagsB.Length)
                 {
                     return false;
