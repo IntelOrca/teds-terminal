@@ -56,11 +56,10 @@ namespace tterm.Ansi
                 }
 
                 string cmdline = null;
-                string env = null;
+                string env = GetEnvironmentString(profile.EnvironmentVariables);
                 if (profile.Arguments != null && profile.Arguments.Length > 0)
                 {
                     cmdline = string.Join(" ", profile.Arguments.Select(x => $"\"{x}\""));
-                    env = GetEnvironmentString(profile.EnvironmentVariables);
                 }
                 spawnCfg = winpty_spawn_config_new(WINPTY_SPAWN_FLAG_AUTO_SHUTDOWN, profile.Command, cmdline, profile.CurrentWorkingDirectory, env, out err);
                 if (err != IntPtr.Zero)

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 using MahApps.Metro.Controls;
+using Newtonsoft.Json;
 using static tterm.Native.Win32;
 
 namespace tterm.Ui
@@ -65,6 +67,19 @@ namespace tterm.Ui
                         IsResizing = false;
                     }
                     break;
+                case WM_COPYDATA:
+                    {
+                        var data = Marshal.PtrToStructure<COPYDATASTRUCT>(lParam);
+                        string forkDataJson = Marshal.PtrToStringUni(data.lpData);
+
+                        // Defer the behaviour until after we have replied to the caller process
+                        Dispatcher.InvokeAsync(() =>
+                        {
+                            var forkData = JsonConvert.DeserializeObject<ForkData>(forkDataJson);
+                            OnForked(forkData);
+                        });
+                        return new IntPtr(1);
+                    }
             }
             return IntPtr.Zero;
         }
@@ -121,6 +136,10 @@ namespace tterm.Ui
         }
 
         protected virtual void OnResizeEnded()
+        {
+        }
+
+        protected virtual void OnForked(ForkData data)
         {
         }
     }

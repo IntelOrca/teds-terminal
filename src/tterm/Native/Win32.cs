@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
-using System.Security;
-using Microsoft.Win32.SafeHandles;
 
 namespace tterm.Native
 {
@@ -12,6 +9,7 @@ namespace tterm.Native
     internal static class Win32
     {
         public const int WM_SIZE = 0x0005;
+        public const int WM_COPYDATA = 0x004A;
         public const int WM_SIZING = 0x0214;
         public const int WM_ENTERSIZEMOVE = 0x0231;
         public const int WM_EXITSIZEMOVE = 0x0232;
@@ -63,8 +61,11 @@ namespace tterm.Native
         [DllImport("user32.dll")]
         public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
+        [DllImport("user32.dll")]
+        public static extern bool SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
         [DllImport("kernel32.dll")]
-        public extern static bool CloseHandle(IntPtr handle);
+        public static extern bool CloseHandle(IntPtr handle);
 
         [DllImport("kernel32.dll")]
         public static extern IntPtr LoadLibrary(string path);
@@ -86,6 +87,14 @@ namespace tterm.Native
 
         [DllImport("advapi32.dll", SetLastError = true)]
         public static extern bool OpenProcessToken(IntPtr ProcessHandle, int DesiredAccess, ref IntPtr TokenHandle);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct COPYDATASTRUCT
+        {
+            public IntPtr dwData;
+            public int cbData;
+            public IntPtr lpData;
+        }
 
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT

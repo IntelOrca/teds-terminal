@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
@@ -106,6 +107,14 @@ namespace tterm.Ui
             CreateSession(_defaultProfile);
         }
 
+        protected override void OnForked(ForkData data)
+        {
+            Profile profile = _defaultProfile;
+            profile.CurrentWorkingDirectory = data.CurrentWorkingDirectory;
+            profile.EnvironmentVariables = data.Environment;
+            CreateSession(profile);
+        }
+
         private void CreateSession(Profile profile)
         {
             var session = _sessionMgr.CreateSession(_terminalSize, profile);
@@ -191,6 +200,10 @@ namespace tterm.Ui
             {
                 envHelper.ExpandVariables(env, profileEnv);
             }
+
+            string assemblyPath = System.Reflection.Assembly.GetEntryAssembly().Location;
+            string assemblyDirectory = Path.GetDirectoryName(assemblyPath);
+            env[EnvironmentVariables.PATH] = assemblyDirectory + ";" + env[EnvironmentVariables.PATH];
 
             return new Profile()
             {

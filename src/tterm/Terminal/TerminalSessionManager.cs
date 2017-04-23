@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 namespace tterm.Terminal
 {
@@ -15,6 +16,10 @@ namespace tterm.Terminal
 
         public TerminalSession CreateSession(TerminalSize size, Profile profile)
         {
+            // Force our own environment variable so shells know we are in a tterm session
+            int pid = Process.GetCurrentProcess().Id;
+            profile.EnvironmentVariables[EnvironmentVariables.TTERM] = pid.ToString();
+
             var session = new TerminalSession(size, profile);
             session.Finished += OnSessionFinished;
 
