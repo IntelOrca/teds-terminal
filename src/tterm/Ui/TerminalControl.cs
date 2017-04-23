@@ -489,6 +489,58 @@ namespace tterm.Ui
                 case Key.Space:
                     text = " ";
                     break;
+                case Key.F1:
+                    text = Construct(1, 'P');
+                    break;
+                case Key.F2:
+                    text = Construct(1, 'Q');
+                    break;
+                case Key.F3:
+                    text = Construct(1, 'R');
+                    break;
+                case Key.F4:
+                    text = Construct(1, 'S');
+                    break;
+                case Key.F5:
+                    text = (modCode == 0) ?
+                        $"{C0.ESC}[15~" :
+                        $"{C0.ESC}[15;{modCode + 1}~";
+                    break;
+                case Key.F6:
+                    text = (modCode == 0) ?
+                        $"{C0.ESC}[17~" :
+                        $"{C0.ESC}[17;{modCode + 1}~";
+                    break;
+                case Key.F7:
+                    text = (modCode == 0) ?
+                        $"{C0.ESC}[18~" :
+                        $"{C0.ESC}[18;{modCode + 1}~";
+                    break;
+                case Key.F8:
+                    text = (modCode == 0) ?
+                        $"{C0.ESC}[19~" :
+                        $"{C0.ESC}[19;{modCode + 1}~";
+                    break;
+                case Key.F9:
+                    text = (modCode == 0) ?
+                        $"{C0.ESC}[20~" :
+                        $"{C0.ESC}[20;{modCode + 1}~";
+                    break;
+                case Key.F10:
+                    text = (modCode == 0) ?
+                        $"{C0.ESC}[21~" :
+                        $"{C0.ESC}[21;{modCode + 1}~";
+                    break;
+                case Key.F11:
+                    text = (modCode == 0) ?
+                        $"{C0.ESC}[23~" :
+                        $"{C0.ESC}[23;{modCode + 1}~";
+                    break;
+                case Key.F12:
+                    text = (modCode == 0) ?
+                        $"{C0.ESC}[24~" :
+                        $"{C0.ESC}[24;{modCode + 1}~";
+                    break;
             }
             if (text != string.Empty)
             {
