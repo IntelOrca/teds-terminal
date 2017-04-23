@@ -42,6 +42,7 @@ namespace tterm.Ui
         private int _lastUpdateTick;
         private int _updateAvailable;
 
+        private int _focusTick;
 
         public TerminalSession Session
         {
@@ -276,7 +277,7 @@ namespace tterm.Ui
                 heavyLoad = (total < UpdateTimerTriggerMs);
             }
 
-            if (heavyLoad)
+            if (heavyLoad && !IsSelecting)
             {
                 _updateTimer.IsEnabled = true;
             }
@@ -365,6 +366,12 @@ namespace tterm.Ui
             return base.ArrangeOverride(arrangeSize);
         }
 
+        protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e)
+        {
+            base.OnGotKeyboardFocus(e);
+            _focusTick = e.Timestamp;
+        }
+
         protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
         {
             if (!IsSessionAvailable)
@@ -373,6 +380,13 @@ namespace tterm.Ui
             }
 
             Focus();
+
+            // Prevent selection if we have just gained focus of the control
+            if (e.Timestamp - _focusTick < 100)
+            {
+                return;
+            }
+
             if (e.LeftButton == MouseButtonState.Pressed)
             {
                 var pos = e.GetPosition(this);
@@ -404,7 +418,7 @@ namespace tterm.Ui
                 return;
             }
 
-            if (e.LeftButton == MouseButtonState.Pressed)
+            if (e.LeftButton == MouseButtonState.Pressed && IsSelecting)
             {
                 var pos = e.GetPosition(this);
                 var point = GetBufferCoordinates(pos);
