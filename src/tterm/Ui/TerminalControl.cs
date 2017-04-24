@@ -237,6 +237,7 @@ namespace tterm.Ui
             {
                 pos = TranslatePoint(pos, line);
                 int col = line.GetColumnAt(pos);
+                row += Buffer.WindowTop;
                 result = new TerminalPoint(col, row);
             }
             return result;
@@ -304,9 +305,10 @@ namespace tterm.Ui
             {
                 int lineCount = Buffer.Size.Rows;
                 var lineTags = new TerminalTagArray[lineCount];
+                int windowTop = Buffer.WindowTop;
                 for (int y = 0; y < lineCount; y++)
                 {
-                    lineTags[y] = Buffer.GetFormattedLine(y);
+                    lineTags[y] = Buffer.GetFormattedLine(windowTop + y);
                 }
 
                 Dispatcher.InvokeAsync(() =>
@@ -448,6 +450,18 @@ namespace tterm.Ui
                     offset = -Buffer.WindowTop;
                 }
                 Buffer.Scroll(offset);
+
+                // Update selection
+                if (IsSelecting)
+                {
+                    var pos = e.GetPosition(this);
+                    var point = GetBufferCoordinates(pos);
+                    if (point.HasValue)
+                    {
+                        EndSelectionAt(point.Value);
+                    }
+                }
+
                 UpdateContentForced();
                 e.Handled = true;
             }

@@ -213,7 +213,6 @@ namespace tterm.Terminal
             var tags = ImmutableArray.CreateBuilder<TerminalTag>(initialCapacity: _size.Columns);
 
             (var buffer, int startIndex, int endIndex) = GetLineBufferRange(y);
-            y += WindowTop;
             if (buffer == null)
             {
                 AddFillerTags(tags, 0, y, _size.Columns);
@@ -302,7 +301,6 @@ namespace tterm.Terminal
 
         private (IList<TerminalBufferChar> buffer, int startIndex, int endIndex) GetLineBufferRange(int y)
         {
-            y += WindowTop;
             if (y < 0)
             {
                 int historyIndex = _history.Count + y;
