@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
@@ -201,10 +200,6 @@ namespace tterm.Ui
                 envHelper.ExpandVariables(env, profileEnv);
             }
 
-            string assemblyPath = System.Reflection.Assembly.GetEntryAssembly().Location;
-            string assemblyDirectory = Path.GetDirectoryName(assemblyPath);
-            env[EnvironmentVariables.PATH] = assemblyDirectory + ";" + env[EnvironmentVariables.PATH];
-
             return new Profile()
             {
                 Command = envHelper.ExpandVariables(profile.Command, env),
@@ -363,23 +358,42 @@ namespace tterm.Ui
             var modifiers = Keyboard.Modifiers;
             if (modifiers.HasFlag(ModifierKeys.Control))
             {
-                if (e.Key == Key.Tab)
+                switch (e.Key)
                 {
-                    var direction = modifiers.HasFlag(ModifierKeys.Shift) ?
-                        CycleDirection.Previous : CycleDirection.Next;
-                    CycleSession(direction);
-                    e.Handled = true;
-                }
-                else if (e.Key == Key.PageUp)
-                {
-                    int direction = modifiers.HasFlag(ModifierKeys.Shift) ? -1 : 1;
-                    CycleSession(CycleDirection.Previous);
-                    e.Handled = true;
-                }
-                else if (e.Key == Key.PageDown)
-                {
-                    CycleSession(CycleDirection.Next);
-                    e.Handled = true;
+                    case Key.Tab:
+                        {
+                            var direction = modifiers.HasFlag(ModifierKeys.Shift) ?
+                                CycleDirection.Previous : CycleDirection.Next;
+                            CycleSession(direction);
+                            e.Handled = true;
+                            break;
+                        }
+                    case Key.PageUp:
+                        {
+                            int direction = modifiers.HasFlag(ModifierKeys.Shift) ? -1 : 1;
+                            CycleSession(CycleDirection.Previous);
+                            e.Handled = true;
+                            break;
+                        }
+                    case Key.PageDown:
+                        {
+                            CycleSession(CycleDirection.Next);
+                            e.Handled = true;
+                            break;
+                        }
+                    case Key.N:
+                        {
+                            var app = Application.Current as App;
+                            app.StartNewInstance();
+                            e.Handled = true;
+                            break;
+                        }
+                    case Key.T:
+                        {
+                            CreateSession(_defaultProfile);
+                            e.Handled = true;
+                            break;
+                        }
                 }
             }
             base.OnPreviewKeyDown(e);

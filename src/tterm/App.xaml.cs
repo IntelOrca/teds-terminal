@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using Newtonsoft.Json;
@@ -14,6 +16,9 @@ namespace tterm
     /// </summary>
     public partial class App : Application
     {
+        public string AssemblyPath { get; } = Assembly.GetEntryAssembly().Location;
+        public string AssemblyDirectory { get; } = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+
         protected override void OnStartup(StartupEventArgs e)
         {
             string[] args = e.Args;
@@ -84,6 +89,11 @@ namespace tterm
                 Environment = Environment.GetEnvironmentVariables().ToGeneric<string, string>()
             };
             return JsonConvert.SerializeObject(forkData);
+        }
+
+        public void StartNewInstance()
+        {
+            Process.Start(AssemblyPath);
         }
     }
 }

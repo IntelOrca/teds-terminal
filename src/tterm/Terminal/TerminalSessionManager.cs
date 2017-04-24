@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Windows;
 
 namespace tterm.Terminal
 {
@@ -16,15 +17,26 @@ namespace tterm.Terminal
 
         public TerminalSession CreateSession(TerminalSize size, Profile profile)
         {
-            // Force our own environment variable so shells know we are in a tterm session
-            int pid = Process.GetCurrentProcess().Id;
-            profile.EnvironmentVariables[EnvironmentVariables.TTERM] = pid.ToString();
+            PrepareTTermEnvironment(profile);
 
             var session = new TerminalSession(size, profile);
             session.Finished += OnSessionFinished;
 
             _sessions.Add(session);
             return session;
+        }
+
+        private void PrepareTTermEnvironment(Profile profile)
+        {
+            var env = profile.EnvironmentVariables;
+
+            // Force our own environment variable so shells know we are in a tterm session
+            int pid = Process.GetCurrentProcess().Id;
+            env[EnvironmentVariables.TTERM] = pid.ToString();
+
+            // Add assembly directory to PATH so tterm can be launched from the shell
+            var app = Application.Current as App;
+            env[EnvironmentVariables.PATH] = app.AssemblyDirectory + ";" + env[EnvironmentVariables.PATH];
         }
 
         private void OnSessionFinished(object sender, EventArgs e)
