@@ -357,5 +357,66 @@ namespace tterm.Ui
                 }
             }
         }
+
+        protected override void OnPreviewKeyDown(KeyEventArgs e)
+        {
+            var modifiers = Keyboard.Modifiers;
+            if (modifiers.HasFlag(ModifierKeys.Control))
+            {
+                if (e.Key == Key.Tab)
+                {
+                    var direction = modifiers.HasFlag(ModifierKeys.Shift) ?
+                        CycleDirection.Previous : CycleDirection.Next;
+                    CycleSession(direction);
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.PageUp)
+                {
+                    int direction = modifiers.HasFlag(ModifierKeys.Shift) ? -1 : 1;
+                    CycleSession(CycleDirection.Previous);
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.PageDown)
+                {
+                    CycleSession(CycleDirection.Next);
+                    e.Handled = true;
+                }
+            }
+            base.OnPreviewKeyDown(e);
+        }
+
+        private enum CycleDirection { Previous, Next}
+
+        private void CycleSession(CycleDirection direction)
+        {
+            int numSessions = _sessionMgr.Sessions.Count;
+            if (numSessions > 1)
+            {
+                int sessionIndex = _sessionMgr.Sessions.IndexOf(_currentSession);
+                if (sessionIndex != -1)
+                {
+                    if (direction == CycleDirection.Previous)
+                    {
+                        sessionIndex--;
+                        if (sessionIndex < 0)
+                        {
+                            sessionIndex = numSessions - 1;
+                        }
+                    }
+                    else
+                    {
+                        sessionIndex++;
+                        if (sessionIndex >= numSessions)
+                        {
+                            sessionIndex = 0;
+                        }
+                    }
+
+                    var newSession = _sessionMgr.Sessions[sessionIndex];
+                    var newTab = _leftTabs[sessionIndex];
+                    ChangeSession(newSession, newTab);
+                }
+            }
+        }
     }
 }
