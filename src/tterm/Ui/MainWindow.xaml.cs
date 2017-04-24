@@ -164,6 +164,11 @@ namespace tterm.Ui
             }
         }
 
+        private void CloseSession(TerminalSession session)
+        {
+            session.Dispose();
+        }
+
         private void OnSessionTitleChanged(object sender, EventArgs e)
         {
             var session = sender as TerminalSession;
@@ -391,6 +396,15 @@ namespace tterm.Ui
                     case Key.T:
                         {
                             CreateSession(_defaultProfile);
+                            e.Handled = true;
+                            break;
+                        }
+                    case Key.W:
+                        {
+                            if (_currentSession != null)
+                            {
+                                CloseSession(_currentSession);
+                            }
                             e.Handled = true;
                             break;
                         }
