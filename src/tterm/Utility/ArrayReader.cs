@@ -16,6 +16,13 @@ namespace tterm.Utility
             RemainingLength = array.Length;
         }
 
+        public ArrayReader(T[] array, int offset, int count)
+        {
+            _array = array;
+            Offset = offset;
+            RemainingLength = count;
+        }
+
         public ArrayReader(ArraySegment<T> segment)
         {
             _array = segment.Array;

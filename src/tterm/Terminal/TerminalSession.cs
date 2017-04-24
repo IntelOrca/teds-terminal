@@ -1,24 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Interop;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using MahApps.Metro.Controls;
-using MahApps.Metro.IconPacks;
 using tterm.Ansi;
-using tterm.Extensions;
-using tterm.Terminal;
-using tterm.Ui.Models;
 using tterm.Utility;
 
 namespace tterm.Terminal
@@ -95,6 +81,7 @@ namespace tterm.Terminal
         {
             return Task.Run(async delegate
             {
+                var ansiParser = new AnsiParser();
                 var sr = new StreamReader(stream, Encoding.UTF8);
                 do
                 {
@@ -103,22 +90,17 @@ namespace tterm.Terminal
                     int readChars = await sr.ReadAsync(buffer, offset, buffer.Length - offset);
                     if (readChars > 0)
                     {
-                        var segment = new ArraySegment<char>(buffer, 0, readChars);
-                        var reader = new ArrayReader<char>(segment);
-                        ReceiveOutput(reader);
-
-                        Array.Copy(buffer, reader.Offset, buffer, 0, reader.RemainingLength);
-                        offset = reader.RemainingLength;
+                        var reader = new ArrayReader<char>(buffer, 0, readChars);
+                        var codes = ansiParser.Parse(reader);
+                        ReceiveOutput(codes);
                     }
                 }
                 while (!sr.EndOfStream);
             });
         }
 
-        private void ReceiveOutput(ArrayReader<char> reader)
+        private void ReceiveOutput(IEnumerable<TerminalCode> codes)
         {
-            var ansiParser = new AnsiParser();
-            var codes = ansiParser.Parse(reader);
             lock (_bufferSync)
             {
                 foreach (var code in codes)
