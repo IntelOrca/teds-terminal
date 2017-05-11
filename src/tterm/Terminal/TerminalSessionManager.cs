@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows;
+using tterm.Extensions;
 
 namespace tterm.Terminal
 {
@@ -36,7 +37,12 @@ namespace tterm.Terminal
 
             // Add assembly directory to PATH so tterm can be launched from the shell
             var app = Application.Current as App;
-            env[EnvironmentVariables.PATH] = app.AssemblyDirectory + ";" + env[EnvironmentVariables.PATH];
+            string path = env.GetValueOrDefault(EnvironmentVariables.PATH);
+            if (!string.IsNullOrEmpty(path))
+            {
+                path = ";" + path;
+            }
+            env[EnvironmentVariables.PATH] = app.AssemblyDirectory + path;
         }
 
         private void OnSessionFinished(object sender, EventArgs e)
