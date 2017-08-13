@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Windows;
 using tterm.Ansi;
 using tterm.Ui;
@@ -193,7 +194,9 @@ namespace tterm.Terminal
 
         public void CopySelection()
         {
-            string[] selectionText = GetSelectionText();
+            string[] selectionText = GetSelectionText()
+                .Select(x => x.TrimEnd())
+                .ToArray();
             string text = String.Join(Environment.NewLine, selectionText);
             var dataObject = new DataObject();
             dataObject.SetText(text);
