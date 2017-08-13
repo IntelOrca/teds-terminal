@@ -1,8 +1,8 @@
-version: 0.1.4.{build}
+version: 0.1.5.{build}
 image:
 - Visual Studio 2017
 environment:
-  version: 0.1.4
+  version: 0.1.5
 assembly_info:
   patch: true
   file: AssemblyInfo.*
