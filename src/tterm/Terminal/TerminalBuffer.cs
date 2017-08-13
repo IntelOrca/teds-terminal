@@ -185,11 +185,38 @@ namespace tterm.Terminal
         public string[] GetSelectionText()
         {
             var selection = Selection;
-            int left = Math.Min(selection.Start.Column, selection.End.Column);
-            int right = Math.Max(selection.Start.Column, selection.End.Column);
-            int top = Math.Min(selection.Start.Row, selection.End.Row);
-            int bottom = Math.Max(selection.Start.Row, selection.End.Row);
-            return GetText(left, top, right, bottom);
+            if (selection.Mode == SelectionMode.Stream)
+            {
+                (var start, var end) = selection.GetMinMax();
+                var result = new List<string>();
+                for (int y = start.Row; y <= end.Row; y++)
+                {
+                    int x0 = 0;
+                    int x1 = _size.Columns - 1;
+                    if (y == start.Row)
+                    {
+                        x0 = start.Column;
+                    }
+                    if (y == end.Row)
+                    {
+                        x1 = end.Column;
+                    }
+                    result.Add(GetText(x0, y, x1 - x0 + 1));
+                }
+                return result.ToArray();
+            }
+            else if (selection.Mode == SelectionMode.Block)
+            {
+                int left = Math.Min(selection.Start.Column, selection.End.Column);
+                int right = Math.Max(selection.Start.Column, selection.End.Column);
+                int top = Math.Min(selection.Start.Row, selection.End.Row);
+                int bottom = Math.Max(selection.Start.Row, selection.End.Row);
+                return GetText(left, top, right, bottom);
+            }
+            else
+            {
+                throw new InvalidOperationException("Unknown selection mode.");
+            }
         }
 
         public void CopySelection()
@@ -333,7 +360,30 @@ namespace tterm.Terminal
             {
                 return false;
             }
-            else
+            else if (selection.Mode == SelectionMode.Stream)
+            {
+                (var start, var end) = selection.GetMinMax();
+                if (y == start.Row)
+                {
+                    if (x < start.Column)
+                    {
+                        return false;
+                    }
+                }
+                if (y == end.Row)
+                {
+                    if (x > end.Column)
+                    {
+                        return false;
+                    }
+                }
+                if (y < start.Row || y > end.Row)
+                {
+                    return false;
+                }
+                return true;
+            }
+            else if (selection.Mode == SelectionMode.Block)
             {
                 int left = Math.Min(selection.Start.Column, selection.End.Column);
                 int right = Math.Max(selection.Start.Column, selection.End.Column);
@@ -341,6 +391,10 @@ namespace tterm.Terminal
                 int bottom = Math.Max(selection.Start.Row, selection.End.Row);
                 return (x >= left && x <= right &&
                         y >= top && y <= bottom);
+            }
+            else
+            {
+                throw new InvalidOperationException("Unknown selection mode.");
             }
         }
 

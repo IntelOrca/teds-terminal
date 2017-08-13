@@ -347,7 +347,12 @@ namespace tterm.Ui
 
         private void StartSelectionAt(TerminalPoint startPoint)
         {
-            Buffer.Selection = new TerminalSelection(SelectionMode.Block, startPoint, startPoint);
+            var mode = SelectionMode.Stream;
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))
+            {
+                mode = SelectionMode.Block;
+            }
+            Buffer.Selection = new TerminalSelection(mode, startPoint, startPoint);
             UpdateContentForced();
         }
 
@@ -355,8 +360,13 @@ namespace tterm.Ui
         {
             if (Buffer.Selection != null)
             {
+                var mode = SelectionMode.Stream;
+                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))
+                {
+                    mode = SelectionMode.Block;
+                }
                 var startPoint = Buffer.Selection.Start;
-                Buffer.Selection = new TerminalSelection(SelectionMode.Block, startPoint, endPoint);
+                Buffer.Selection = new TerminalSelection(mode, startPoint, endPoint);
                 UpdateContentForced();
             }
         }
@@ -485,7 +495,7 @@ namespace tterm.Ui
             if (modifiers.HasFlag(ModifierKeys.Control)) modCode |= 4;
             if (modifiers.HasFlag(ModifierKeys.Windows)) modCode |= 8;
 
-            if (IsSelecting)
+            if (IsSelecting && !modifiers.HasFlag(ModifierKeys.Alt))
             {
                 ClearSelection();
                 if (e.Key == Key.Escape)
